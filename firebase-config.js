@@ -40,9 +40,10 @@ function initFirebaseService(onStatusChange, onOrdersUpdated, onProductsUpdated,
         firestoreDb.enablePersistence({ synchronizeTabs: true }).catch(() => {});
       } catch (e) {}
 
-      // Lắng nghe Realtime thay đổi từ Collection Orders
+      // Lắng nghe Realtime thay đổi từ Collection Orders (Giới hạn 300 đơn gần nhất để đảm bảo không vượt gói Free)
       firestoreDb.collection(COLLECTIONS.ORDERS)
         .orderBy('createdAt', 'desc')
+        .limit(300)
         .onSnapshot(
           (snapshot) => {
             isFirebaseOnline = true;
@@ -64,21 +65,19 @@ function initFirebaseService(onStatusChange, onOrdersUpdated, onProductsUpdated,
           }
         );
 
-      // Lắng nghe Realtime thay đổi từ Collection Products (Danh mục sản phẩm Excel)
-      firestoreDb.collection(COLLECTIONS.PRODUCTS)
+      // Lắng nghe Realtime danh mục sản phẩm từ 1 Document duy nhất (Tiết kiệm 99.9% quota đọc)
+      firestoreDb.collection(COLLECTIONS.SETTINGS).doc('product_catalog')
         .onSnapshot(
-          (snapshot) => {
-            const products = [];
-            snapshot.forEach(doc => {
+          (doc) => {
+            if (doc.exists) {
               const data = doc.data();
-              products.push({ id: doc.id, ...data });
-            });
-            if (products.length > 0 && onProductsUpdated) {
-              onProductsUpdated(products);
+              if (data && Array.isArray(data.items) && data.items.length > 0) {
+                if (onProductsUpdated) onProductsUpdated(data.items);
+              }
             }
           },
           (error) => {
-            console.warn('Firestore Products onSnapshot error:', error);
+            console.warn('Firestore Product Catalog onSnapshot error:', error);
           }
         );
 
