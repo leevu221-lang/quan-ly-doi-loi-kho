@@ -580,6 +580,13 @@ body.theme-dark .icon-indigo { background: rgba(99, 102, 241, 0.2); color: #818c
   white-space: nowrap;
 }
 
+.btn .icon,
+.icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
 .btn-sm {
   padding: 6px 12px;
   font-size: 12.5px;
@@ -759,7 +766,20 @@ body.theme-dark .icon-indigo { background: rgba(99, 102, 241, 0.2); color: #818c
 .table-responsive {
   width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
+.table-responsive::-webkit-scrollbar {
+  height: 6px;
+}
+.table-responsive::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+.table-responsive::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
 .max-h-300 { max-height: 300px; overflow-y: auto; }
 .max-h-250 { max-height: 250px; overflow-y: auto; }
 
@@ -768,6 +788,27 @@ body.theme-dark .icon-indigo { background: rgba(99, 102, 241, 0.2); color: #818c
   border-collapse: collapse;
   text-align: left;
   font-size: 13px;
+}
+
+#ordersTable {
+  min-width: 1120px;
+}
+
+.mobile-scroll-hint {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: rgba(2, 132, 199, 0.08);
+  color: var(--primary);
+  font-size: 11.5px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-color);
+}
+@media (max-width: 900px) {
+  .mobile-scroll-hint {
+    display: flex;
+  }
 }
 
 .data-table thead th {
@@ -1908,58 +1949,249 @@ body.theme-dark .print-wrapper {
 }
 
 /* ==============================================================================
-   RESPONSIVE DESIGN (MOBILE & TABLET)
+   RESPONSIVE DESIGN (MOBILE & TABLET & DESKTOP)
    ============================================================================== */
 @media (max-width: 900px) {
-  .header-inner {
-    padding: 10px 16px;
-    flex-wrap: wrap;
-  }
   .app-main {
-    padding: 16px;
+    padding: 14px 12px;
   }
   .form-row-2 {
     grid-template-columns: 1fr;
-    gap: 10px;
+    gap: 12px;
   }
   .auto-system-bar {
     grid-template-columns: 1fr;
     gap: 8px;
   }
   .receipt-signatures {
-    grid-template-columns: 1fr;
-    gap: 20px;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
   }
   .sig-space {
     height: 35px;
   }
 }
 
-@media (max-width: 600px) {
-  .brand-title {
-    font-size: 15px;
+@media (max-width: 680px) {
+  /* Mobile Header: Single row, compact, never wraps awkwardly */
+  .header-inner {
+    padding: 8px 12px;
+    flex-wrap: nowrap;
+    gap: 8px;
   }
-  .kpi-grid {
-    grid-template-columns: 1fr 1fr;
+  .brand-group {
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+  }
+  .brand-logo {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+  }
+  .brand-icon {
+    width: 20px;
+    height: 20px;
+  }
+  .brand-info {
+    min-width: 0;
+  }
+  .badge-mini {
+    display: none;
+  }
+  .brand-title {
+    font-size: 13.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .header-actions {
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .theme-toggle {
+    width: 34px;
+    height: 34px;
+    padding: 6px;
+  }
+  .btn-user-badge {
+    padding: 4px 8px 4px 6px;
+    gap: 6px;
+  }
+  .user-badge-icon {
+    width: 26px;
+    height: 26px;
+    font-size: 11px;
+  }
+  .user-badge-code {
+    font-size: 9px;
   }
   .user-badge-name {
-    max-width: 110px;
+    font-size: 11px;
+    max-width: 72px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .user-dropdown-menu {
+    width: 280px;
+    max-width: calc(100vw - 20px);
+    right: 0;
+  }
+
+  /* Mobile KPI Grid: Clean 2x2 grid */
+  .kpi-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .kpi-card {
+    padding: 10px 12px;
+    gap: 8px;
+    border-radius: var(--radius-md);
+  }
+  .kpi-icon-wrap {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+  }
+  .kpi-icon-wrap svg {
+    width: 18px;
+    height: 18px;
+  }
+  .kpi-title {
+    font-size: 9.5px;
+    letter-spacing: 0.2px;
+  }
+  .kpi-number {
+    font-size: 20px;
+    margin: 2px 0 0 0;
+  }
+  .kpi-desc {
+    display: none;
+  }
+
+  /* Control Panel & Buttons */
+  .control-panel-card {
+    border-radius: var(--radius-md);
   }
   .panel-header {
+    padding: 14px 14px 12px 14px;
     flex-direction: column;
     align-items: stretch;
+    gap: 12px;
+  }
+  .panel-heading {
+    font-size: 15px;
+  }
+  .panel-subheading {
+    font-size: 11.5px;
   }
   .panel-actions {
+    display: flex;
     flex-direction: column;
     width: 100%;
+    gap: 8px;
   }
   .panel-actions .btn {
     width: 100%;
     justify-content: center;
+    padding: 10px 14px;
+    font-size: 13px;
   }
+
+  /* Filter Toolbar */
   .filter-toolbar {
+    padding: 12px 14px;
     flex-direction: column;
     align-items: stretch;
+    gap: 10px;
+  }
+  .search-input-wrap {
+    min-width: 0;
+    width: 100%;
+  }
+  .filter-pills {
+    width: 100%;
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 3px;
+    scrollbar-width: none;
+  }
+  .filter-pills::-webkit-scrollbar {
+    display: none;
+  }
+  .pill {
+    flex-shrink: 0;
+    padding: 6px 12px;
+    font-size: 11.5px;
+  }
+  .filter-select-wrap {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .filter-select-wrap label {
+    font-size: 12px;
+    white-space: nowrap;
+    min-width: 68px;
+  }
+  .filter-select-wrap .select-sm {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+  }
+
+  /* Modals on Mobile */
+  .modal-overlay {
+    padding: 8px;
+  }
+  .modal-card {
+    max-height: 94vh;
+    border-radius: var(--radius-md);
+  }
+  .modal-header {
+    padding: 12px 14px;
+  }
+  .modal-heading {
+    font-size: 14.5px;
+  }
+  .modal-subheading {
+    font-size: 11px;
+  }
+  .modal-body {
+    padding: 12px 14px;
+  }
+  .modal-footer {
+    padding: 10px 14px;
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+  .modal-footer .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .receipt-paper {
+    padding: 16px 12px;
+    font-size: 11.5px;
+  }
+  .receipt-header {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .receipt-code-box {
+    text-align: left;
+  }
+  #receiptBarcode {
+    max-width: 100%;
+  }
+  .receipt-signatures {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
   }
 }
 
