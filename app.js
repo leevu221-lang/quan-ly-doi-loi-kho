@@ -12,6 +12,7 @@ const LOCAL_KEYS = (typeof STORAGE_KEYS !== "undefined") ? STORAGE_KEYS : {
   ORDERS: "dmx_doi_loi_orders",
   STAFF: "dmx_doi_loi_staff",
   CURRENT_STAFF: "dmx_current_staff",
+  LAST_STAFF_CODE: "dmx_last_staff_code",
   PRODUCTS: "dmx_doi_loi_products"
 };
 
@@ -124,6 +125,7 @@ function cacheDOMElements() {
   DOM.inputNewBranchCode = document.getElementById("inputNewBranchCode");
   DOM.btnGoToBranch = document.getElementById("btnGoToBranch");
   DOM.linkKhoDefault = document.getElementById("linkKhoDefault");
+  DOM.linkKho10528 = document.getElementById("linkKho10528");
   DOM.linkKho2 = document.getElementById("linkKho2");
   DOM.linkKho3 = document.getElementById("linkKho3");
   DOM.linkKhoShopB = document.getElementById("linkKhoShopB");
@@ -271,21 +273,22 @@ function toggleTheme() {
 }
 
 function initStoredData() {
-  // Load staff
+  // Load staff (Tách riêng biệt theo từng kho)
+  const isDefaultBranch = (typeof IS_DEFAULT_BRANCH !== "undefined") ? IS_DEFAULT_BRANCH : true;
   const storedStaff = localStorage.getItem(LOCAL_KEYS.STAFF);
   if (storedStaff) {
     try {
       const parsed = JSON.parse(storedStaff);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         State.staffList = parsed;
       } else {
-        State.staffList = [...INITIAL_STAFF];
+        State.staffList = isDefaultBranch ? [...INITIAL_STAFF] : [];
       }
     } catch(e) {
-      State.staffList = [...INITIAL_STAFF];
+      State.staffList = isDefaultBranch ? [...INITIAL_STAFF] : [];
     }
   } else {
-    State.staffList = [...INITIAL_STAFF];
+    State.staffList = isDefaultBranch ? [...INITIAL_STAFF] : [];
     localStorage.setItem(LOCAL_KEYS.STAFF, JSON.stringify(State.staffList));
   }
 
@@ -320,7 +323,7 @@ function initStoredData() {
     }
   }
 
-  // Load nhân viên đăng nhập hiện tại
+  // Load nhân viên đăng nhập hiện tại (theo kho)
   const savedStaff = localStorage.getItem(LOCAL_KEYS.CURRENT_STAFF);
   if (savedStaff) {
     try {
@@ -328,7 +331,7 @@ function initStoredData() {
     } catch(e) {}
   }
   if (!State.currentStaff || !State.currentStaff.code) {
-    const lastCode = localStorage.getItem("dmx_last_staff_code");
+    const lastCode = localStorage.getItem(LOCAL_KEYS.LAST_STAFF_CODE);
     const found = State.staffList.find(s => s.code === lastCode);
     if (found) State.currentStaff = found;
   }
@@ -406,7 +409,7 @@ function getActiveStaff() {
       if (parsed && parsed.code && parsed.code !== "ADMIN") return parsed;
     } catch(e) {}
   }
-  const lastCode = localStorage.getItem("dmx_last_staff_code");
+  const lastCode = localStorage.getItem(LOCAL_KEYS.LAST_STAFF_CODE);
   const found = State.staffList.find(s => s.code === lastCode && s.code !== "ADMIN");
   if (found) return found;
 
@@ -416,6 +419,7 @@ function getActiveStaff() {
 // Tự động sửa lại những đơn cũ bị gán nhầm là Admin về nhân viên tiếp nhận thực tế
 function fixAdminStaffInOrders() {
   const activeStaff = getActiveStaff();
+  if (!activeStaff) return;
   let changed = false;
   State.orders.forEach(o => {
     if (o.staffCode === "ADMIN" || !o.staffName || o.staffName.includes("Admin") || o.staffName.includes("Quản Trị")) {
@@ -442,7 +446,7 @@ function loginAsStaff(staff) {
     name: staff.name
   };
   localStorage.setItem(LOCAL_KEYS.CURRENT_STAFF, JSON.stringify(State.currentStaff));
-  localStorage.setItem("dmx_last_staff_code", staff.code);
+  localStorage.setItem(LOCAL_KEYS.LAST_STAFF_CODE, staff.code);
   updateUserBadgeUI();
   if (DOM.modalLoginStaff) {
     DOM.modalLoginStaff.classList.remove("is-gate");
@@ -478,9 +482,38 @@ function logout() {
   showStaffSelectionGate();
 }
 
-// Render 10 chip nhân viên để chọn 1-chạm trong modal đăng nhập
+// Render chip nhân viên để chọn 1-chạm trong modal đăng nhập (Tách biệt theo từng kho)
 function renderStaffChipsInModal() {
-  const lastCode = localStorage.getItem("dmx_last_staff_code") || "";
+  const branchName = (typeof getBranchDisplayName === "function") ? getBranchDisplayName(CURRENT_BRANCH) : "Mặc định";
+  const lastCode = localStorage.getItem(LOCAL_KEYS.LAST_STAFF_CODE) || "";
+
+  if (!State.staffList || State.staffList.length === 0) {
+    DOM.staffChipsList.innerHTML = `
+      <div style="grid-column: 1 / -1; padding: 22px; text-align: center; background: var(--bg-surface-subtle); border-radius: var(--radius-md); border: 1px dashed var(--border-color);">
+        <div style="font-size: 26px; margin-bottom: 6px;">🏪</div>
+        <div style="font-weight: 700; color: var(--text-main); font-size: 14.5px;">Kho ${escapeHtml(branchName)} chưa có nhân viên riêng</div>
+        <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 5px; line-height: 1.5;">
+          Mỗi kho có danh sách nhân viên tách biệt độc lập.<br/>Vui lòng đăng nhập Quản trị viên (Admin) để tạo danh sách nhân viên riêng cho Kho ${escapeHtml(branchName)}.
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" id="btnGateGoAdmin" style="margin-top: 12px;">
+          🛡️ Đăng nhập Admin thêm nhân viên
+        </button>
+      </div>
+    `;
+    const btnGo = DOM.staffChipsList.querySelector("#btnGateGoAdmin");
+    if (btnGo) {
+      btnGo.addEventListener("click", () => {
+        closeModal(DOM.modalLoginStaff);
+        openModal(DOM.modalLoginAdmin);
+        if (DOM.adminPasswordInput) {
+          DOM.adminPasswordInput.value = "";
+          DOM.adminPasswordInput.focus();
+        }
+      });
+    }
+    return;
+  }
+
   DOM.staffChipsList.innerHTML = State.staffList.map(st => {
     const isRecent = st.code === lastCode ? " is-recent" : "";
     return `
@@ -503,13 +536,11 @@ function renderStaffChipsInModal() {
   });
 }
 
-// Tìm kiếm autocomplete nhân viên & hiển thị danh sách 10 nhân viên
+// Tìm kiếm autocomplete nhân viên theo danh sách của kho hiện tại
 function handleStaffSearchAutocomplete(query) {
   const cleanQ = removeVietnameseTones((query || "").trim().toLowerCase());
-  const lastCode = localStorage.getItem("dmx_last_staff_code") || "";
+  const lastCode = localStorage.getItem(LOCAL_KEYS.LAST_STAFF_CODE) || "";
 
-  // Nếu rỗng: hiển thị toàn bộ 10 nhân viên
-  // Nếu có chữ: lọc theo mã hoặc tên
   const matches = cleanQ 
     ? State.staffList.filter(s => {
         const codeMatch = s.code.toLowerCase().includes(cleanQ);
@@ -519,7 +550,8 @@ function handleStaffSearchAutocomplete(query) {
     : State.staffList;
 
   if (!matches.length) {
-    DOM.staffSuggestionsDropdown.innerHTML = `<div class="dropdown-option" style="color: var(--text-muted); cursor: default; padding: 12px 14px;">Không tìm thấy nhân viên "${escapeHtml(query)}"</div>`;
+    const branchName = (typeof getBranchDisplayName === "function") ? getBranchDisplayName(CURRENT_BRANCH) : "Mặc định";
+    DOM.staffSuggestionsDropdown.innerHTML = `<div class="dropdown-option" style="color: var(--text-muted); cursor: default; padding: 12px 14px;">Kho ${escapeHtml(branchName)} chưa có nhân viên "${escapeHtml(query)}"</div>`;
     DOM.staffSuggestionsDropdown.style.display = "block";
     return;
   }
@@ -564,6 +596,11 @@ function openManageStaffModal() {
     console.error("modalManageStaff element not found");
     return;
   }
+  const branchName = (typeof getBranchDisplayName === "function") ? getBranchDisplayName(CURRENT_BRANCH) : "Mặc định";
+  const headingEl = modal.querySelector(".modal-heading");
+  if (headingEl) {
+    headingEl.textContent = `Quản Lý Nhân Viên - Kho ${branchName}`;
+  }
   resetStaffCrudForm();
   renderStaffManageTable();
   modal.style.display = "flex";
@@ -573,8 +610,8 @@ function renderStaffManageTable() {
   const tbody = DOM.staffManageTableBody || document.getElementById("staffManageTableBody");
   const countDisplay = DOM.staffCountDisplay || document.getElementById("staffCountDisplay");
   
-  if (!Array.isArray(State.staffList) || State.staffList.length === 0) {
-    State.staffList = [...INITIAL_STAFF];
+  if (!Array.isArray(State.staffList)) {
+    State.staffList = [];
   }
 
   if (countDisplay) {
@@ -584,10 +621,11 @@ function renderStaffManageTable() {
   if (!tbody) return;
 
   if (State.staffList.length === 0) {
+    const branchName = (typeof getBranchDisplayName === "function") ? getBranchDisplayName(CURRENT_BRANCH) : "Mặc định";
     DOM.staffManageTableBody.innerHTML = `
       <tr>
         <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">
-          Chưa có nhân viên nào. Hãy thêm nhân viên mới ở form bên trên!
+          Kho ${escapeHtml(branchName)} chưa có nhân viên nào. Hãy thêm nhân viên mới ở form bên trên!
         </td>
       </tr>
     `;
@@ -735,7 +773,8 @@ async function deleteStaff(code) {
 }
 
 async function handleResetDefaultStaff() {
-  const confirmed = confirm("Khôi phục về 10 nhân viên mẫu mặc định của siêu thị?\n\nLưu ý: Mọi nhân viên mới thêm hoặc chỉnh sửa sẽ được đặt lại theo danh sách ban đầu.");
+  const branchName = (typeof getBranchDisplayName === "function") ? getBranchDisplayName(CURRENT_BRANCH) : "Mặc định";
+  const confirmed = confirm(`Nạp lại 10 nhân viên mẫu cho Kho ${branchName}?\n\nLưu ý: Thao tác này chỉ áp dụng riêng cho Kho ${branchName}, không làm thay đổi danh sách nhân viên của kho khác.`);
   if (!confirmed) return;
 
   State.staffList = [...INITIAL_STAFF];
@@ -749,7 +788,7 @@ async function handleResetDefaultStaff() {
   renderStaffFilterOptions();
   renderStaffChipsInModal();
   playSuccessSound();
-  showToast("Đã khôi phục thành công 10 nhân viên mẫu mặc định!", "success");
+  showToast(`Đã nạp 10 nhân viên mẫu cho Kho ${branchName}!`, "success");
 }
 
 // ==============================================================================
@@ -2187,41 +2226,54 @@ function initBranchSwitcher() {
 
   const branchId = (typeof CURRENT_BRANCH !== "undefined") ? CURRENT_BRANCH : "default";
   const isDefault = (typeof IS_DEFAULT_BRANCH !== "undefined") ? IS_DEFAULT_BRANCH : true;
+  const branchDisplayName = (typeof getBranchDisplayName === "function")
+    ? getBranchDisplayName(branchId)
+    : (isDefault ? "Mặc định" : branchId);
 
-  // Cập nhật nhãn trên header badge
-  const branchDisplayName = isDefault ? "Mặc định" : branchId.toUpperCase();
+  // Cập nhật nhãn trên header badge (Đúng chuẩn yêu cầu: "Kho 10528" hoặc "Kho: Mặc định")
   if (DOM.currentBranchLabel) {
-    DOM.currentBranchLabel.textContent = `🏪 Kho: ${branchDisplayName}`;
+    DOM.currentBranchLabel.textContent = isDefault ? "🏪 Kho: Mặc định" : `🏪 Kho ${branchDisplayName}`;
   }
 
   // Cập nhật tên kho trong modal
   if (DOM.modalCurrentBranchName) {
     DOM.modalCurrentBranchName.textContent = isDefault 
       ? "Kho: Mặc định (Kho chính)" 
-      : `Kho: ${branchId.toUpperCase()}`;
+      : `Kho ${branchDisplayName}`;
   }
 
   // Tạo URL chia sẻ chuẩn
   const currentOrigin = window.location.origin;
   const currentPath = window.location.pathname;
+  const cleanBranch = (typeof cleanBranchCode === "function") ? cleanBranchCode(branchId) : branchId;
   const shareUrl = isDefault 
     ? `${currentOrigin}${currentPath}`
-    : `${currentOrigin}${currentPath}?kho=${encodeURIComponent(branchId)}`;
+    : `${currentOrigin}${currentPath}?kho=${encodeURIComponent(cleanBranch)}`;
 
   if (DOM.inputShareBranchUrl) {
     DOM.inputShareBranchUrl.value = shareUrl;
   }
 
+  // Tự động làm sạch URL trên thanh địa chỉ nếu đang dính chuỗi domain dài hoặc URL cũ
+  try {
+    if (window.history && window.history.replaceState && window.location.search) {
+      if (window.location.search.includes("https") || window.location.search.length > 25) {
+        window.history.replaceState(null, "", shareUrl);
+      }
+    }
+  } catch(e) {}
+
   // Highlight shortcut pill tương ứng
   const pills = [
     { el: DOM.linkKhoDefault, id: "default" },
+    { el: DOM.linkKho10528, id: "10528" },
     { el: DOM.linkKho2, id: "2" },
     { el: DOM.linkKho3, id: "3" },
     { el: DOM.linkKhoShopB, id: "shop-b" }
   ];
   pills.forEach(p => {
     if (p.el) {
-      if ((isDefault && p.id === "default") || (!isDefault && branchId === p.id)) {
+      if ((isDefault && p.id === "default") || (!isDefault && cleanBranch === p.id)) {
         p.el.classList.add("active");
         p.el.style.borderColor = "var(--primary)";
         p.el.style.background = "rgba(2, 132, 199, 0.12)";
@@ -2275,18 +2327,21 @@ function initBranchSwitcher() {
   function navigateToNewBranch() {
     const rawInput = DOM.inputNewBranchCode ? DOM.inputNewBranchCode.value.trim() : "";
     if (!rawInput) {
-      showToast("Vui lòng nhập tên hoặc mã kho muốn mở!", "warning");
+      showToast("Vui lòng nhập tên hoặc mã kho muốn mở (VD: 10528)!", "warning");
       if (DOM.inputNewBranchCode) DOM.inputNewBranchCode.focus();
       return;
     }
 
-    const cleanBranch = rawInput.toLowerCase().replace(/[^a-z0-9_-]/g, "");
-    if (!cleanBranch || cleanBranch === "default" || cleanBranch === "1" || cleanBranch === "main") {
+    const clean = (typeof cleanBranchCode === "function") 
+      ? cleanBranchCode(rawInput) 
+      : rawInput.toLowerCase().replace(/[^a-z0-9_-]/g, "");
+
+    if (!clean || clean === "default") {
       localStorage.setItem("dmx_active_branch", "default");
       window.location.href = `${currentOrigin}${currentPath}`;
     } else {
-      localStorage.setItem("dmx_active_branch", cleanBranch);
-      window.location.href = `${currentOrigin}${currentPath}?kho=${encodeURIComponent(cleanBranch)}`;
+      localStorage.setItem("dmx_active_branch", clean);
+      window.location.href = `${currentOrigin}${currentPath}?kho=${encodeURIComponent(clean)}`;
     }
   }
 

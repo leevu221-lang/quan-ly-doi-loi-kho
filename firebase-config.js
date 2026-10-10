@@ -12,30 +12,77 @@ const FIREBASE_CONFIG = {
   appId: "1:665213457085:web:976cdbafbf69583d73ddd4"
 };
 
+// Chuẩn hóa mã kho/chi nhánh: chỉ lấy tên/mã kho thực sự (VD: 10528, 2, shop-b)
+function cleanBranchCode(raw) {
+  if (!raw) return "default";
+  let s = String(raw).trim();
+
+  // 1. Nếu dán cả đường link URL hoặc URL chứa query parameter ?kho=
+  if (s.includes("?") || s.includes("/") || s.includes("http")) {
+    try {
+      const u = new URL(s.startsWith("http") ? s : `https://dummy.local/${s}`);
+      const k = u.searchParams.get("kho") || u.searchParams.get("branch") || u.searchParams.get("store");
+      if (k) s = k.trim();
+    } catch(e) {}
+    const m = s.match(/[?&](?:kho|branch|store)=([^&#\s]+)/i);
+    if (m && m[1]) s = decodeURIComponent(m[1]).trim();
+  }
+
+  // 2. Xử lý chuỗi URL dính liền do replace trước đó (như httpsleevu221...kho10528)
+  if (/quan-?ly-?doi-?loi-?kho/i.test(s) || /https/i.test(s)) {
+    const trailing = s.replace(/^.*kho[-_:]*/i, "");
+    if (trailing && trailing !== s) {
+      s = trailing;
+    }
+  }
+
+  // 3. Bỏ tiền tố "Kho", "Kho ", "Kho: ", "Kho-" nếu người dùng gõ "Kho 10528"
+  s = s.replace(/^kho[\s:_ -]*/i, "");
+
+  // 4. Lọc ký tự hợp lệ (chữ cái, chữ số, gạch ngang, gạch dưới)
+  s = s.toLowerCase().replace(/[^a-z0-9_-]/g, "");
+
+  // 5. Kiểm tra nếu là kho mặc định
+  if (!s || s === "default" || s === "1" || s === "main" || s === "macdinh" || s === "mac-dinh") {
+    return "default";
+  }
+
+  return s;
+}
+
 // Xác định Kho / Chi nhánh từ URL (?kho=...) hoặc bộ nhớ máy
 function getActiveBranchId() {
   try {
     const params = new URLSearchParams(window.location.search);
     if (params.has("kho") || params.has("branch") || params.has("store")) {
-      let branch = params.get("kho") || params.get("branch") || params.get("store") || "default";
-      branch = branch.trim().toLowerCase();
-      if (!branch || branch === "default" || branch === "1") {
-        branch = "default";
-      }
+      const raw = params.get("kho") || params.get("branch") || params.get("store") || "";
+      const branch = cleanBranchCode(raw);
       localStorage.setItem("dmx_active_branch", branch);
       return branch;
     }
     const saved = localStorage.getItem("dmx_active_branch");
     if (saved && saved.trim()) {
-      return saved.trim().toLowerCase();
+      const cleaned = cleanBranchCode(saved);
+      if (cleaned !== saved) {
+        localStorage.setItem("dmx_active_branch", cleaned);
+      }
+      return cleaned;
     }
   } catch (e) {}
   return "default";
 }
 
 const CURRENT_BRANCH = getActiveBranchId();
-const IS_DEFAULT_BRANCH = (CURRENT_BRANCH === "default" || CURRENT_BRANCH === "1");
-const BRANCH_SUFFIX = IS_DEFAULT_BRANCH ? "" : `_${CURRENT_BRANCH.replace(/[^a-z0-9_-]/g, '')}`;
+const IS_DEFAULT_BRANCH = (CURRENT_BRANCH === "default");
+const BRANCH_SUFFIX = IS_DEFAULT_BRANCH ? "" : `_${CURRENT_BRANCH}`;
+
+// Tên hiển thị chuẩn của Kho (VD: "10528", "2", "Shop-B", "Mặc định")
+function getBranchDisplayName(branchId) {
+  const b = branchId || CURRENT_BRANCH;
+  if (!b || b === "default") return "Mặc định";
+  if (/^\d+$/.test(b)) return b; // Giữ nguyên số như 10528, 2, 3
+  return b.toUpperCase();
+}
 
 // Tên các Collections trong Cloud Firestore (Tách riêng cho từng kho độc lập)
 const COLLECTIONS = {
@@ -45,11 +92,12 @@ const COLLECTIONS = {
   SETTINGS: "quan_ly_doi_loi_settings"
 };
 
-// Khóa lưu trữ LocalStorage tương ứng với kho
+// Khóa lưu trữ LocalStorage tương ứng với từng kho độc lập
 const STORAGE_KEYS = {
   ORDERS: `dmx_doi_loi_orders${BRANCH_SUFFIX}`,
   STAFF: `dmx_doi_loi_staff${BRANCH_SUFFIX}`,
   CURRENT_STAFF: `dmx_current_staff${BRANCH_SUFFIX}`,
+  LAST_STAFF_CODE: `dmx_last_staff_code${BRANCH_SUFFIX}`,
   PRODUCTS: "dmx_doi_loi_products"
 };
 
@@ -120,7 +168,7 @@ function initFirebaseService(onStatusChange, onOrdersUpdated, onProductsUpdated,
           (doc) => {
             if (doc.exists) {
               const data = doc.data();
-              if (data && Array.isArray(data.list) && data.list.length > 0) {
+              if (data && Array.isArray(data.list)) {
                 if (onStaffUpdated) onStaffUpdated(data.list);
               }
             }
@@ -328,10 +376,11 @@ async function syncProductsToFirebase(productsList) {
 async function syncStaffToFirebase(staffList) {
   localStorage.setItem(STORAGE_KEYS.STAFF, JSON.stringify(staffList));
 
-  if (firestoreDb && staffList.length > 0) {
+  if (firestoreDb && Array.isArray(staffList)) {
     try {
       await firestoreDb.collection(COLLECTIONS.STAFF).doc('active_staff_list').set({
         updatedAt: new Date().toISOString(),
+        branch: CURRENT_BRANCH,
         totalStaff: staffList.length,
         list: staffList
       });
