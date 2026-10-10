@@ -452,32 +452,29 @@ function handleStaffSearchAutocomplete(query) {
 // 3.1. QUẢN LÝ NHÂN VIÊN (THÊM / SỬA / XÓA & ĐỒNG BỘ CLOUD)
 // ==============================================================================
 function openManageStaffModal() {
-  if (State.currentUser.role === "admin") {
-    resetStaffCrudForm();
-    renderStaffManageTable();
-    openModal(DOM.modalManageStaff);
+  const modal = DOM.modalManageStaff || document.getElementById("modalManageStaff");
+  if (!modal) {
+    console.error("modalManageStaff element not found");
     return;
   }
-
-  // Nếu chưa đăng nhập Admin: yêu cầu nhập mật khẩu Quản trị viên
-  const enteredPass = prompt("🔐 Tính năng Quản lý Nhân viên dành cho Quản trị viên (Admin).\nVui lòng nhập mật khẩu Admin để tiếp tục:");
-  if (enteredPass === null) return; // User bấm hủy
-
-  if (enteredPass.trim() === ADMIN_PASSWORD) {
-    loginAsAdmin();
-    resetStaffCrudForm();
-    renderStaffManageTable();
-    openModal(DOM.modalManageStaff);
-  } else {
-    showToast("Mật khẩu Quản trị viên không chính xác!", "error");
-  }
+  resetStaffCrudForm();
+  renderStaffManageTable();
+  modal.style.display = "flex";
 }
 
 function renderStaffManageTable() {
-  if (!DOM.staffManageTableBody) return;
-  if (DOM.staffCountDisplay) {
-    DOM.staffCountDisplay.textContent = State.staffList.length;
+  const tbody = DOM.staffManageTableBody || document.getElementById("staffManageTableBody");
+  const countDisplay = DOM.staffCountDisplay || document.getElementById("staffCountDisplay");
+  
+  if (!Array.isArray(State.staffList) || State.staffList.length === 0) {
+    State.staffList = [...INITIAL_STAFF];
   }
+
+  if (countDisplay) {
+    countDisplay.textContent = State.staffList.length;
+  }
+
+  if (!tbody) return;
 
   if (State.staffList.length === 0) {
     DOM.staffManageTableBody.innerHTML = `
