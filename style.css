@@ -895,6 +895,17 @@ body.theme-dark .defect-reason-badge {
   font-weight: 600;
 }
 
+.staff-wh-badge {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #047857;
+}
+body.theme-dark .staff-wh-badge {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #6ee7b7;
+}
+
 /* Status Badges */
 .status-badge {
   display: inline-flex;

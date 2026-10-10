@@ -1296,11 +1296,11 @@ function exportOrdersToExcel() {
       "MÃ SẢN PHẨM",
       "TÊN SẢN PHẨM ĐỔI LỖI",
       "GHI CHÚ",
-      "NHÂN VIÊN TIẾP NHẬN",
-      "MÃ NHÂN VIÊN",
+      "NHÂN VIÊN TẠO PHIẾU",
+      "MÃ NV TẠO",
+      "NHÂN VIÊN NHẬN HÀNG LỖI",
       "TRẠNG THÁI VỀ KHO",
       "NGÀY GIỜ VỀ KHO",
-      "NGƯỜI XÁC NHẬN KHO",
       "VỊ TRÍ LƯU KHO",
       "GHI CHÚ KHO"
     ]
@@ -1317,9 +1317,9 @@ function exportOrdersToExcel() {
       o.notes || "",
       o.staffName,
       o.staffCode,
+      o.warehouseConfirmedBy || (o.warehouseStatus === "DA_VE_KHO" ? "Đã nhận kho" : "Chưa nhận kho"),
       o.warehouseStatus === "DA_VE_KHO" ? "ĐÃ VỀ KHO" : "CHƯA VỀ KHO",
       o.warehouseDisplayTime || (o.warehouseTime ? formatDateTime(o.warehouseTime) : ""),
-      o.warehouseConfirmedBy || "",
       o.warehouseLocation || "",
       o.warehouseNotes || ""
     ]);
@@ -1381,8 +1381,9 @@ function getFilteredOrders() {
       const matchProd = removeVietnameseTones((o.productName || "").toLowerCase()).includes(q);
       const matchSerial = (o.serial || "").toLowerCase().includes(q);
       const matchStaff = removeVietnameseTones((o.staffName || "").toLowerCase()).includes(q);
+      const matchWhStaff = removeVietnameseTones((o.warehouseConfirmedBy || "").toLowerCase()).includes(q);
 
-      if (!matchCode && !matchPhone && !matchName && !matchProd && !matchSerial && !matchStaff) {
+      if (!matchCode && !matchPhone && !matchName && !matchProd && !matchSerial && !matchStaff && !matchWhStaff) {
         return false;
       }
     }
@@ -1443,21 +1444,33 @@ function renderOrdersTable() {
           </div>
         </td>
 
-        <!-- Nhân viên tiếp nhận -->
+        <!-- Nhân viên tạo phiếu -->
         <td>
-          <div class="staff-tag-badge">
+          <div class="staff-tag-badge" title="Nhân viên lập phiếu tiếp nhận tại quầy">
             <span>👤</span>
-            <span>${escapeHtml(o.staffName)} (${escapeHtml(o.staffCode)})</span>
+            <span>${escapeHtml(o.staffName)} ${o.staffCode ? `(${escapeHtml(o.staffCode)})` : ''}</span>
           </div>
+        </td>
+
+        <!-- Nhân viên nhận hàng lỗi -->
+        <td>
+          ${o.warehouseConfirmedBy 
+            ? `<div class="staff-tag-badge staff-wh-badge" title="Thủ kho đã nhận hàng: ${escapeHtml(o.warehouseDisplayTime || '')}">
+                <span>🏢</span>
+                <span>${escapeHtml(o.warehouseConfirmedBy)}</span>
+               </div>`
+            : `<span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--text-muted); padding: 3px 8px; border-radius: var(--radius-sm); background: var(--bg-surface-subtle); border: 1px dashed var(--border-color);" title="Chưa nhập kho">
+                ⏳ Chưa nhận
+               </span>`
+          }
         </td>
 
         <!-- Trạng thái kho -->
         <td style="text-align: center;">
           ${isReceived 
-            ? `<span class="status-badge badge-received" title="Đã nhập kho: ${escapeHtml(o.warehouseDisplayTime || '')} - Người nhận: ${escapeHtml(o.warehouseConfirmedBy || '')}">
+            ? `<span class="status-badge badge-received" title="Đã nhập kho: ${escapeHtml(o.warehouseDisplayTime || '')}">
                 ✅ Đã về kho
-               </span>
-               ${o.warehouseConfirmedBy ? `<div style="font-size: 11px; color: var(--text-muted); margin-top: 3px; font-weight: 500;">🏢 ${escapeHtml(o.warehouseConfirmedBy)}</div>` : ''}`
+               </span>`
             : `<span class="status-badge badge-pending" title="Hàng đang để tại quầy siêu thị, chưa chuyển về kho">
                 ⚠️ Chưa về kho
                </span>`
