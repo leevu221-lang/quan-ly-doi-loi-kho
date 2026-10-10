@@ -107,6 +107,13 @@
                 <p>Dành cho Quản trị viên & Thủ kho</p>
               </div>
             </button>
+            <button class="dropdown-item" id="btnMenuManageStaff">
+              <span class="item-icon">👥</span>
+              <div>
+                <strong>Quản lý nhân viên</strong>
+                <p>Thêm, sửa, xóa danh sách nhân viên</p>
+              </div>
+            </button>
             <div class="dropdown-divider" id="dropdownDividerLogout" style="display: none;"></div>
             <button class="dropdown-item text-danger" id="btnMenuLogout" style="display: none;">
               <span class="item-icon">🚪</span>
@@ -201,6 +208,17 @@
               <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
             <span>➕ Nhập Đổi Lỗi Mới</span>
+          </button>
+
+          <!-- Button Quản lý Nhân Viên (Thêm, Sửa, Xóa) -->
+          <button type="button" class="btn btn-outline" id="btnOpenManageStaffModal" title="Thêm mới, sửa hoặc xóa nhân viên tiếp nhận">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon text-primary">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            <span>👥 Quản Lý Nhân Viên</span>
           </button>
 
           <!-- Button Import Excel Sản Phẩm (Dành riêng cho Admin) -->
@@ -354,11 +372,16 @@
 
         <div class="modal-footer-gate">
           <div class="gate-note">
-            <span>🛡️ Bạn là Quản lý / Thủ kho?</span>
+            <span>🛡️ Quản lý / Thủ kho:</span>
           </div>
-          <button type="button" class="btn btn-outline btn-sm" id="btnSwitchToAdminLogin">
-            <span>Đăng nhập Quản trị viên (Admin)</span>
-          </button>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-outline btn-sm" id="btnOpenStaffManageFromLogin" title="Thêm mới, chỉnh sửa hoặc xóa nhân viên">
+              <span>👥 Quản lý Nhân Viên</span>
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" id="btnSwitchToAdminLogin">
+              <span>Đăng nhập Admin</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -772,6 +795,92 @@
             ⚠️ <em>Quý khách vui lòng giữ biên nhận này để đối chiếu khi nhận lại sản phẩm hoặc hoàn tất thủ tục đổi hàng. Mọi thắc mắc vui lòng liên hệ tổng đài Điện Máy Xanh.</em>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: QUẢN LÝ DANH SÁCH NHÂN VIÊN (THÊM / SỬA / XÓA) -->
+  <!-- ======================================================== -->
+  <div class="modal-overlay" id="modalManageStaff" style="display: none;">
+    <div class="modal-card modal-md">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon-badge" style="background: var(--primary-light); color: var(--primary);">👥</div>
+          <div>
+            <h3 class="modal-heading">Quản Lý Danh Sách Nhân Viên</h3>
+            <p class="modal-subheading">Thêm mới, chỉnh sửa thông tin hoặc xóa nhân viên siêu thị</p>
+          </div>
+        </div>
+        <button class="btn-close-modal" id="btnCloseManageStaff">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Form Thêm / Sửa Nhân Viên -->
+        <div class="staff-crud-box">
+          <h4 id="staffFormTitle" class="staff-crud-title">➕ Thêm Nhân Viên Mới</h4>
+          <form id="staffCrudForm">
+            <input type="hidden" id="editStaffOriginalCode" value="" />
+            <div class="form-row-2">
+              <div class="form-group" style="margin-bottom: 8px;">
+                <label class="form-label" for="inputCrudStaffCode">Mã nhân viên (User) <span class="required">*</span></label>
+                <input 
+                  type="text" 
+                  id="inputCrudStaffCode" 
+                  class="form-control font-mono" 
+                  placeholder="VD: 38834, 12345..." 
+                  required 
+                />
+              </div>
+              <div class="form-group" style="margin-bottom: 8px;">
+                <label class="form-label" for="inputCrudStaffName">Họ và tên nhân viên <span class="required">*</span></label>
+                <input 
+                  type="text" 
+                  id="inputCrudStaffName" 
+                  class="form-control" 
+                  placeholder="VD: NGUYỄN VĂN A..." 
+                  required 
+                />
+              </div>
+            </div>
+            <div class="staff-crud-actions">
+              <button type="button" class="btn btn-outline btn-sm" id="btnCancelStaffEdit" style="display: none;">Hủy sửa</button>
+              <button type="submit" class="btn btn-primary btn-sm" id="btnSubmitStaffForm">
+                <span>💾 Lưu Nhân Viên</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Danh sách nhân viên hiện tại -->
+        <div class="staff-table-section">
+          <div class="staff-table-header">
+            <span class="staff-list-title">Danh sách hiện tại (<strong id="staffCountDisplay">0</strong> nhân viên)</span>
+            <button type="button" class="btn-text-sm" id="btnResetDefaultStaff" title="Khôi phục lại danh sách 10 nhân viên mặc định ban đầu">
+              🔄 Khôi phục 10 NV mẫu
+            </button>
+          </div>
+
+          <div class="staff-table-container">
+            <table class="data-table staff-table-compact">
+              <thead>
+                <tr>
+                  <th style="width: 45px;">STT</th>
+                  <th style="width: 110px;">Mã NV</th>
+                  <th>Họ và tên nhân viên</th>
+                  <th style="width: 125px; text-align: right;">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="staffManageTableBody">
+                <!-- Dynamic staff rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="padding: 12px 24px;">
+        <button type="button" class="btn btn-outline" id="btnCloseManageStaffFooter">Đóng</button>
       </div>
     </div>
   </div>

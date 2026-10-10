@@ -16,6 +16,7 @@ const FIREBASE_CONFIG = {
 const COLLECTIONS = {
   ORDERS: "quan_ly_doi_loi_orders",
   PRODUCTS: "quan_ly_doi_loi_products",
+  STAFF: "quan_ly_doi_loi_staff",
   SETTINGS: "quan_ly_doi_loi_settings"
 };
 
@@ -24,7 +25,7 @@ let firestoreDb = null;
 let isFirebaseOnline = false;
 
 // Khởi tạo Firebase
-function initFirebaseService(onStatusChange, onOrdersUpdated, onProductsUpdated) {
+function initFirebaseService(onStatusChange, onOrdersUpdated, onProductsUpdated, onStaffUpdated) {
   try {
     if (typeof firebase !== 'undefined') {
       if (!firebase.apps.length) {
@@ -78,6 +79,22 @@ function initFirebaseService(onStatusChange, onOrdersUpdated, onProductsUpdated)
           },
           (error) => {
             console.warn('Firestore Products onSnapshot error:', error);
+          }
+        );
+
+      // Lắng nghe Realtime danh sách nhân viên
+      firestoreDb.collection(COLLECTIONS.STAFF).doc('active_staff_list')
+        .onSnapshot(
+          (doc) => {
+            if (doc.exists) {
+              const data = doc.data();
+              if (data && Array.isArray(data.list) && data.list.length > 0) {
+                if (onStaffUpdated) onStaffUpdated(data.list);
+              }
+            }
+          },
+          (error) => {
+            console.warn('Firestore Staff onSnapshot error:', error);
           }
         );
 
@@ -242,6 +259,25 @@ async function syncProductsToFirebase(productsList) {
       return { success: true };
     } catch (e) {
       console.warn('Save product catalog to Firestore error:', e);
+    }
+  }
+  return { success: true };
+}
+
+// Đồng bộ danh sách nhân viên lên Firebase
+async function syncStaffToFirebase(staffList) {
+  localStorage.setItem('dmx_doi_loi_staff', JSON.stringify(staffList));
+
+  if (firestoreDb && staffList.length > 0) {
+    try {
+      await firestoreDb.collection(COLLECTIONS.STAFF).doc('active_staff_list').set({
+        updatedAt: new Date().toISOString(),
+        totalStaff: staffList.length,
+        list: staffList
+      });
+      return { success: true };
+    } catch (e) {
+      console.warn('Save staff list to Firestore error:', e);
     }
   }
   return { success: true };

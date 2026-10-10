@@ -92,7 +92,8 @@ document.addEventListener("DOMContentLoaded", () => {
   initFirebaseService(
     handleFirebaseStatusChange,
     handleFirebaseOrdersUpdated,
-    handleFirebaseProductsUpdated
+    handleFirebaseProductsUpdated,
+    handleFirebaseStaffUpdated
   );
 });
 
@@ -101,7 +102,8 @@ function cacheDOMElements() {
   DOM.firebaseStatusBadge = document.getElementById("firebaseStatusBadge");
   DOM.firebaseStatusText = document.getElementById("firebaseStatusText");
   
-  // User Auth
+  // User Auth & Header
+  DOM.userAuthWrap = document.querySelector(".user-auth-wrap");
   DOM.btnUserBadge = document.getElementById("btnUserBadge");
   DOM.userBadgeIcon = document.getElementById("userBadgeIcon");
   DOM.userBadgeRole = document.getElementById("userBadgeRole");
@@ -109,8 +111,11 @@ function cacheDOMElements() {
   DOM.userDropdownMenu = document.getElementById("userDropdownMenu");
   DOM.btnMenuLoginStaff = document.getElementById("btnMenuLoginStaff");
   DOM.btnMenuLoginAdmin = document.getElementById("btnMenuLoginAdmin");
+  DOM.btnMenuManageStaff = document.getElementById("btnMenuManageStaff");
   DOM.btnMenuLogout = document.getElementById("btnMenuLogout");
   DOM.dropdownDividerLogout = document.getElementById("dropdownDividerLogout");
+  DOM.btnOpenManageStaffModal = document.getElementById("btnOpenManageStaffModal");
+  DOM.btnOpenStaffManageFromLogin = document.getElementById("btnOpenStaffManageFromLogin");
 
   // KPI
   DOM.statTotalOrders = document.getElementById("statTotalOrders");
@@ -205,6 +210,21 @@ function cacheDOMElements() {
   DOM.btnCloseReceipt = document.getElementById("btnCloseReceipt");
   DOM.btnPrintReceipt = document.getElementById("btnPrintReceipt");
 
+  // Modal Quản Lý Nhân Viên (Thêm / Sửa / Xóa)
+  DOM.modalManageStaff = document.getElementById("modalManageStaff");
+  DOM.btnCloseManageStaff = document.getElementById("btnCloseManageStaff");
+  DOM.btnCloseManageStaffFooter = document.getElementById("btnCloseManageStaffFooter");
+  DOM.staffFormTitle = document.getElementById("staffFormTitle");
+  DOM.staffCrudForm = document.getElementById("staffCrudForm");
+  DOM.editStaffOriginalCode = document.getElementById("editStaffOriginalCode");
+  DOM.inputCrudStaffCode = document.getElementById("inputCrudStaffCode");
+  DOM.inputCrudStaffName = document.getElementById("inputCrudStaffName");
+  DOM.btnCancelStaffEdit = document.getElementById("btnCancelStaffEdit");
+  DOM.btnSubmitStaffForm = document.getElementById("btnSubmitStaffForm");
+  DOM.staffCountDisplay = document.getElementById("staffCountDisplay");
+  DOM.btnResetDefaultStaff = document.getElementById("btnResetDefaultStaff");
+  DOM.staffManageTableBody = document.getElementById("staffManageTableBody");
+
   // Toast
   DOM.toastBox = document.getElementById("toastBox");
   DOM.toastIcon = document.getElementById("toastIcon");
@@ -224,6 +244,24 @@ function toggleTheme() {
 }
 
 function initStoredData() {
+  // Load staff
+  const storedStaff = localStorage.getItem("dmx_doi_loi_staff");
+  if (storedStaff) {
+    try {
+      const parsed = JSON.parse(storedStaff);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        State.staffList = parsed;
+      } else {
+        State.staffList = [...INITIAL_STAFF];
+      }
+    } catch(e) {
+      State.staffList = [...INITIAL_STAFF];
+    }
+  } else {
+    State.staffList = [...INITIAL_STAFF];
+    localStorage.setItem("dmx_doi_loi_staff", JSON.stringify(State.staffList));
+  }
+
   // Load products
   const storedProducts = localStorage.getItem("dmx_doi_loi_products");
   if (storedProducts) {
@@ -408,6 +446,206 @@ function handleStaffSearchAutocomplete(query) {
       }
     });
   });
+}
+
+// ==============================================================================
+// 3.1. QUẢN LÝ NHÂN VIÊN (THÊM / SỬA / XÓA & ĐỒNG BỘ CLOUD)
+// ==============================================================================
+function openManageStaffModal() {
+  if (State.currentUser.role === "admin") {
+    resetStaffCrudForm();
+    renderStaffManageTable();
+    openModal(DOM.modalManageStaff);
+    return;
+  }
+
+  // Nếu chưa đăng nhập Admin: yêu cầu nhập mật khẩu Quản trị viên
+  const enteredPass = prompt("🔐 Tính năng Quản lý Nhân viên dành cho Quản trị viên (Admin).\nVui lòng nhập mật khẩu Admin để tiếp tục:");
+  if (enteredPass === null) return; // User bấm hủy
+
+  if (enteredPass.trim() === ADMIN_PASSWORD) {
+    loginAsAdmin();
+    resetStaffCrudForm();
+    renderStaffManageTable();
+    openModal(DOM.modalManageStaff);
+  } else {
+    showToast("Mật khẩu Quản trị viên không chính xác!", "error");
+  }
+}
+
+function renderStaffManageTable() {
+  if (!DOM.staffManageTableBody) return;
+  if (DOM.staffCountDisplay) {
+    DOM.staffCountDisplay.textContent = State.staffList.length;
+  }
+
+  if (State.staffList.length === 0) {
+    DOM.staffManageTableBody.innerHTML = `
+      <tr>
+        <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">
+          Chưa có nhân viên nào. Hãy thêm nhân viên mới ở form bên trên!
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  DOM.staffManageTableBody.innerHTML = State.staffList.map((st, idx) => {
+    return `
+      <tr>
+        <td style="color: var(--text-muted); font-size: 12px; font-weight: 600;">${idx + 1}</td>
+        <td>
+          <span class="badge badge-pending font-mono" style="font-weight: 700;">${escapeHtml(st.code)}</span>
+        </td>
+        <td>
+          <strong style="color: var(--text-main); font-size: 13.5px;">${escapeHtml(st.name)}</strong>
+        </td>
+        <td style="text-align: right; white-space: nowrap;">
+          <button type="button" class="btn-staff-action btn-edit-staff" data-code="${escapeHtml(st.code)}" title="Chỉnh sửa nhân viên">
+            ✏️ Sửa
+          </button>
+          <button type="button" class="btn-staff-action btn-delete-staff" data-code="${escapeHtml(st.code)}" title="Xóa nhân viên khỏi danh sách">
+            🗑️ Xóa
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+
+  // Gắn sự kiện sửa / xóa
+  DOM.staffManageTableBody.querySelectorAll(".btn-edit-staff").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const code = btn.getAttribute("data-code");
+      startEditStaff(code);
+    });
+  });
+
+  DOM.staffManageTableBody.querySelectorAll(".btn-delete-staff").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const code = btn.getAttribute("data-code");
+      deleteStaff(code);
+    });
+  });
+}
+
+function startEditStaff(code) {
+  const staff = State.staffList.find(s => s.code === code);
+  if (!staff) return;
+
+  DOM.editStaffOriginalCode.value = staff.code;
+  DOM.inputCrudStaffCode.value = staff.code;
+  DOM.inputCrudStaffName.value = staff.name;
+
+  DOM.staffFormTitle.innerHTML = `✏️ Sửa Thông Tin: <span style="color: var(--primary);">${escapeHtml(staff.name)}</span>`;
+  DOM.btnSubmitStaffForm.innerHTML = `<span>💾 Cập Nhật Thay Đổi</span>`;
+  DOM.btnCancelStaffEdit.style.display = "inline-flex";
+
+  DOM.inputCrudStaffName.focus();
+  DOM.inputCrudStaffName.select();
+}
+
+function resetStaffCrudForm() {
+  if (DOM.staffCrudForm) DOM.staffCrudForm.reset();
+  if (DOM.editStaffOriginalCode) DOM.editStaffOriginalCode.value = "";
+  if (DOM.staffFormTitle) DOM.staffFormTitle.innerHTML = `➕ Thêm Nhân Viên Mới`;
+  if (DOM.btnSubmitStaffForm) DOM.btnSubmitStaffForm.innerHTML = `<span>💾 Lưu Nhân Viên</span>`;
+  if (DOM.btnCancelStaffEdit) DOM.btnCancelStaffEdit.style.display = "none";
+}
+
+async function handleStaffCrudSubmit(e) {
+  e.preventDefault();
+  const code = (DOM.inputCrudStaffCode.value || "").trim();
+  const name = (DOM.inputCrudStaffName.value || "").trim().toUpperCase();
+  const origCode = (DOM.editStaffOriginalCode.value || "").trim();
+
+  if (!code || !name) {
+    showToast("Vui lòng nhập đầy đủ Mã nhân viên và Họ tên!", "warning");
+    return;
+  }
+
+  if (origCode) {
+    // Chế độ chỉnh sửa (Edit)
+    if (code !== origCode && State.staffList.some(s => s.code.toLowerCase() === code.toLowerCase())) {
+      showToast(`Mã nhân viên "${code}" đã được sử dụng bởi nhân viên khác!`, "error");
+      DOM.inputCrudStaffCode.focus();
+      return;
+    }
+
+    const idx = State.staffList.findIndex(s => s.code === origCode);
+    if (idx !== -1) {
+      State.staffList[idx] = { code, name };
+      localStorage.setItem("dmx_doi_loi_staff", JSON.stringify(State.staffList));
+      if (typeof syncStaffToFirebase === "function") {
+        await syncStaffToFirebase(State.staffList);
+      }
+      renderStaffManageTable();
+      renderStaffFilterOptions();
+      renderStaffChipsInModal();
+      resetStaffCrudForm();
+      playSuccessSound();
+      showToast(`Đã cập nhật thông tin nhân viên "${name}" (${code}) thành công!`, "success");
+    }
+  } else {
+    // Chế độ thêm mới (Add)
+    if (State.staffList.some(s => s.code.toLowerCase() === code.toLowerCase())) {
+      showToast(`Mã nhân viên "${code}" đã tồn tại! Vui lòng chọn mã khác.`, "error");
+      DOM.inputCrudStaffCode.focus();
+      return;
+    }
+
+    State.staffList.push({ code, name });
+    localStorage.setItem("dmx_doi_loi_staff", JSON.stringify(State.staffList));
+    if (typeof syncStaffToFirebase === "function") {
+      await syncStaffToFirebase(State.staffList);
+    }
+    renderStaffManageTable();
+    renderStaffFilterOptions();
+    renderStaffChipsInModal();
+    resetStaffCrudForm();
+    playSuccessSound();
+    showToast(`Đã thêm nhân viên mới "${name}" (${code}) thành công!`, "success");
+  }
+}
+
+async function deleteStaff(code) {
+  const staff = State.staffList.find(s => s.code === code);
+  if (!staff) return;
+
+  const confirmed = confirm(`Bạn có chắc chắn muốn xóa nhân viên:\n\n• Họ tên: ${staff.name}\n• Mã NV: ${staff.code}\n\nSau khi xóa, nhân viên này sẽ không còn trong danh sách đăng nhập.`);
+  if (!confirmed) return;
+
+  State.staffList = State.staffList.filter(s => s.code !== code);
+  localStorage.setItem("dmx_doi_loi_staff", JSON.stringify(State.staffList));
+  if (typeof syncStaffToFirebase === "function") {
+    await syncStaffToFirebase(State.staffList);
+  }
+
+  if (DOM.editStaffOriginalCode && DOM.editStaffOriginalCode.value === code) {
+    resetStaffCrudForm();
+  }
+
+  renderStaffManageTable();
+  renderStaffFilterOptions();
+  renderStaffChipsInModal();
+  showToast(`Đã xóa nhân viên "${staff.name}" khỏi danh sách`, "info");
+}
+
+async function handleResetDefaultStaff() {
+  const confirmed = confirm("Khôi phục về 10 nhân viên mẫu mặc định của siêu thị?\n\nLưu ý: Mọi nhân viên mới thêm hoặc chỉnh sửa sẽ được đặt lại theo danh sách ban đầu.");
+  if (!confirmed) return;
+
+  State.staffList = [...INITIAL_STAFF];
+  localStorage.setItem("dmx_doi_loi_staff", JSON.stringify(State.staffList));
+  if (typeof syncStaffToFirebase === "function") {
+    await syncStaffToFirebase(State.staffList);
+  }
+
+  resetStaffCrudForm();
+  renderStaffManageTable();
+  renderStaffFilterOptions();
+  renderStaffChipsInModal();
+  playSuccessSound();
+  showToast("Đã khôi phục thành công 10 nhân viên mẫu mặc định!", "success");
 }
 
 // ==============================================================================
@@ -1371,6 +1609,44 @@ function setupEventListeners() {
     });
   }
 
+  // Quản lý nhân viên (CRUD Modal triggers)
+  if (DOM.btnOpenManageStaffModal) {
+    DOM.btnOpenManageStaffModal.addEventListener("click", openManageStaffModal);
+  }
+  if (DOM.btnMenuManageStaff) {
+    DOM.btnMenuManageStaff.addEventListener("click", () => {
+      DOM.userDropdownMenu.style.display = "none";
+      openManageStaffModal();
+    });
+  }
+  if (DOM.btnOpenStaffManageFromLogin) {
+    DOM.btnOpenStaffManageFromLogin.addEventListener("click", () => {
+      openManageStaffModal();
+    });
+  }
+  if (DOM.btnCloseManageStaff) {
+    DOM.btnCloseManageStaff.addEventListener("click", () => closeModal(DOM.modalManageStaff));
+  }
+  if (DOM.btnCloseManageStaffFooter) {
+    DOM.btnCloseManageStaffFooter.addEventListener("click", () => closeModal(DOM.modalManageStaff));
+  }
+  if (DOM.btnCancelStaffEdit) {
+    DOM.btnCancelStaffEdit.addEventListener("click", resetStaffCrudForm);
+  }
+  if (DOM.staffCrudForm) {
+    DOM.staffCrudForm.addEventListener("submit", handleStaffCrudSubmit);
+  }
+  if (DOM.btnResetDefaultStaff) {
+    DOM.btnResetDefaultStaff.addEventListener("click", handleResetDefaultStaff);
+  }
+  if (DOM.modalManageStaff) {
+    DOM.modalManageStaff.addEventListener("click", (e) => {
+      if (e.target === DOM.modalManageStaff) {
+        closeModal(DOM.modalManageStaff);
+      }
+    });
+  }
+
   // Modal Close buttons
   DOM.btnCloseStaffLogin.addEventListener("click", () => {
     if (DOM.modalLoginStaff.classList.contains("is-gate") || State.currentUser.role === "guest") {
@@ -1454,6 +1730,18 @@ function handleFirebaseProductsUpdated(productsList) {
   State.products = productsList;
   localStorage.setItem('dmx_doi_loi_products', JSON.stringify(productsList));
   updateKPIs();
+}
+
+function handleFirebaseStaffUpdated(staffList) {
+  if (Array.isArray(staffList) && staffList.length > 0) {
+    State.staffList = staffList;
+    localStorage.setItem("dmx_doi_loi_staff", JSON.stringify(staffList));
+    renderStaffFilterOptions();
+    renderStaffChipsInModal();
+    if (DOM.modalManageStaff && DOM.modalManageStaff.style.display !== "none") {
+      renderStaffManageTable();
+    }
+  }
 }
 
 // ==============================================================================
