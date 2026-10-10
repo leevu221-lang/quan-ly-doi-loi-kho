@@ -12,12 +12,45 @@ const FIREBASE_CONFIG = {
   appId: "1:665213457085:web:976cdbafbf69583d73ddd4"
 };
 
-// Tên các Collections trong Cloud Firestore
+// Xác định Kho / Chi nhánh từ URL (?kho=...) hoặc bộ nhớ máy
+function getActiveBranchId() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("kho") || params.has("branch") || params.has("store")) {
+      let branch = params.get("kho") || params.get("branch") || params.get("store") || "default";
+      branch = branch.trim().toLowerCase();
+      if (!branch || branch === "default" || branch === "1") {
+        branch = "default";
+      }
+      localStorage.setItem("dmx_active_branch", branch);
+      return branch;
+    }
+    const saved = localStorage.getItem("dmx_active_branch");
+    if (saved && saved.trim()) {
+      return saved.trim().toLowerCase();
+    }
+  } catch (e) {}
+  return "default";
+}
+
+const CURRENT_BRANCH = getActiveBranchId();
+const IS_DEFAULT_BRANCH = (CURRENT_BRANCH === "default" || CURRENT_BRANCH === "1");
+const BRANCH_SUFFIX = IS_DEFAULT_BRANCH ? "" : `_${CURRENT_BRANCH.replace(/[^a-z0-9_-]/g, '')}`;
+
+// Tên các Collections trong Cloud Firestore (Tách riêng cho từng kho độc lập)
 const COLLECTIONS = {
-  ORDERS: "quan_ly_doi_loi_orders",
-  PRODUCTS: "quan_ly_doi_loi_products",
-  STAFF: "quan_ly_doi_loi_staff",
+  ORDERS: `quan_ly_doi_loi_orders${BRANCH_SUFFIX}`,
+  STAFF: `quan_ly_doi_loi_staff${BRANCH_SUFFIX}`,
+  PRODUCTS: "quan_ly_doi_loi_products", // Dùng chung 3363 sản phẩm cho mọi kho
   SETTINGS: "quan_ly_doi_loi_settings"
+};
+
+// Khóa lưu trữ LocalStorage tương ứng với kho
+const STORAGE_KEYS = {
+  ORDERS: `dmx_doi_loi_orders${BRANCH_SUFFIX}`,
+  STAFF: `dmx_doi_loi_staff${BRANCH_SUFFIX}`,
+  CURRENT_STAFF: `dmx_current_staff${BRANCH_SUFFIX}`,
+  PRODUCTS: "dmx_doi_loi_products"
 };
 
 let firebaseApp = null;
@@ -109,7 +142,7 @@ function initFirebaseService(onStatusChange, onOrdersUpdated, onProductsUpdated,
 
 // REST API Fallback Helper nếu SDK gặp lỗi bảo mật mạng
 async function loadOrdersFromRestOrLocal(callback) {
-  const localOrders = JSON.parse(localStorage.getItem('dmx_doi_loi_orders') || '[]');
+  const localOrders = JSON.parse(localStorage.getItem(STORAGE_KEYS.ORDERS) || '[]');
   if (callback) callback(localOrders);
 
   try {
@@ -146,14 +179,14 @@ async function loadOrdersFromRestOrLocal(callback) {
 // Lưu 1 đơn đổi lỗi mới vào Firebase
 async function saveOrderToFirebase(orderData) {
   // 1. Lưu vào localStorage trước để phản hồi tức thì
-  const localList = JSON.parse(localStorage.getItem('dmx_doi_loi_orders') || '[]');
+  const localList = JSON.parse(localStorage.getItem(STORAGE_KEYS.ORDERS) || '[]');
   const existingIdx = localList.findIndex(o => o.orderCode === orderData.orderCode);
   if (existingIdx >= 0) {
     localList[existingIdx] = { ...localList[existingIdx], ...orderData };
   } else {
     localList.unshift(orderData);
   }
-  localStorage.setItem('dmx_doi_loi_orders', JSON.stringify(localList));
+  localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(localList));
 
   // 2. Đồng bộ lên Cloud Firestore
   if (firestoreDb) {
@@ -198,11 +231,11 @@ async function saveOrderToFirebase(orderData) {
 // Cập nhật trạng thái xác nhận về kho
 async function updateWarehouseStatusInFirebase(orderCode, warehouseData) {
   // Update local
-  const localList = JSON.parse(localStorage.getItem('dmx_doi_loi_orders') || '[]');
+  const localList = JSON.parse(localStorage.getItem(STORAGE_KEYS.ORDERS) || '[]');
   const item = localList.find(o => o.orderCode === orderCode);
   if (item) {
     Object.assign(item, warehouseData);
-    localStorage.setItem('dmx_doi_loi_orders', JSON.stringify(localList));
+    localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(localList));
   }
 
   // Update Firestore
@@ -222,9 +255,9 @@ async function updateWarehouseStatusInFirebase(orderCode, warehouseData) {
 // Xóa đơn khỏi Firebase (chỉ Admin)
 async function deleteOrderFromFirebase(orderCode) {
   // Local
-  let localList = JSON.parse(localStorage.getItem('dmx_doi_loi_orders') || '[]');
+  let localList = JSON.parse(localStorage.getItem(STORAGE_KEYS.ORDERS) || '[]');
   localList = localList.filter(o => o.orderCode !== orderCode);
-  localStorage.setItem('dmx_doi_loi_orders', JSON.stringify(localList));
+  localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(localList));
 
   if (firestoreDb) {
     try {
@@ -266,7 +299,7 @@ async function syncProductsToFirebase(productsList) {
 
 // Đồng bộ danh sách nhân viên lên Firebase
 async function syncStaffToFirebase(staffList) {
-  localStorage.setItem('dmx_doi_loi_staff', JSON.stringify(staffList));
+  localStorage.setItem(STORAGE_KEYS.STAFF, JSON.stringify(staffList));
 
   if (firestoreDb && staffList.length > 0) {
     try {

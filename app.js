@@ -7,6 +7,14 @@
 // 1. DỮ LIỆU CỐ ĐỊNH & GLOBAL STATE
 // ==============================================================================
 
+// Cấu hình lưu trữ LocalStorage tương thích với từng Kho (Branch)
+const LOCAL_KEYS = (typeof STORAGE_KEYS !== "undefined") ? STORAGE_KEYS : {
+  ORDERS: "dmx_doi_loi_orders",
+  STAFF: "dmx_doi_loi_staff",
+  CURRENT_STAFF: "dmx_current_staff",
+  PRODUCTS: "dmx_doi_loi_products"
+};
+
 // Danh sách 10 nhân viên siêu thị được cấu hình sẵn theo yêu cầu
 const INITIAL_STAFF = [
   { code: "38834", name: "NGÔ THỊ BÉ THẮM" },
@@ -85,6 +93,7 @@ document.addEventListener("DOMContentLoaded", () => {
   renderStaffChipsInModal();
   updateKPIs();
   renderOrdersTable();
+  initBranchSwitcher();
 
   // Bắt buộc hiển thị màn hình chọn nhân viên mỗi lần mở link web trước khi vào ứng dụng
   showStaffSelectionGate();
@@ -102,6 +111,22 @@ function cacheDOMElements() {
   DOM.btnThemeToggle = document.getElementById("btnThemeToggle");
   DOM.firebaseStatusBadge = document.getElementById("firebaseStatusBadge");
   DOM.firebaseStatusText = document.getElementById("firebaseStatusText");
+
+  // Branch Switcher
+  DOM.btnBranchSwitcher = document.getElementById("btnBranchSwitcher");
+  DOM.currentBranchLabel = document.getElementById("currentBranchLabel");
+  DOM.modalBranchSwitcher = document.getElementById("modalBranchSwitcher");
+  DOM.btnCloseBranchModal = document.getElementById("btnCloseBranchModal");
+  DOM.btnCloseBranchModalFooter = document.getElementById("btnCloseBranchModalFooter");
+  DOM.modalCurrentBranchName = document.getElementById("modalCurrentBranchName");
+  DOM.inputShareBranchUrl = document.getElementById("inputShareBranchUrl");
+  DOM.btnCopyShareBranchUrl = document.getElementById("btnCopyShareBranchUrl");
+  DOM.inputNewBranchCode = document.getElementById("inputNewBranchCode");
+  DOM.btnGoToBranch = document.getElementById("btnGoToBranch");
+  DOM.linkKhoDefault = document.getElementById("linkKhoDefault");
+  DOM.linkKho2 = document.getElementById("linkKho2");
+  DOM.linkKho3 = document.getElementById("linkKho3");
+  DOM.linkKhoShopB = document.getElementById("linkKhoShopB");
   
   // User Auth & Header
   DOM.userAuthWrap = document.querySelector(".user-auth-wrap");
@@ -246,7 +271,7 @@ function toggleTheme() {
 
 function initStoredData() {
   // Load staff
-  const storedStaff = localStorage.getItem("dmx_doi_loi_staff");
+  const storedStaff = localStorage.getItem(LOCAL_KEYS.STAFF);
   if (storedStaff) {
     try {
       const parsed = JSON.parse(storedStaff);
@@ -260,11 +285,11 @@ function initStoredData() {
     }
   } else {
     State.staffList = [...INITIAL_STAFF];
-    localStorage.setItem("dmx_doi_loi_staff", JSON.stringify(State.staffList));
+    localStorage.setItem(LOCAL_KEYS.STAFF, JSON.stringify(State.staffList));
   }
 
-  // Load products
-  const storedProducts = localStorage.getItem("dmx_doi_loi_products");
+  // Load products (dùng chung danh mục cho mọi kho)
+  const storedProducts = localStorage.getItem(LOCAL_KEYS.PRODUCTS);
   if (storedProducts) {
     try {
       State.products = JSON.parse(storedProducts);
@@ -273,11 +298,11 @@ function initStoredData() {
     }
   } else {
     State.products = [...DEFAULT_PRODUCTS];
-    localStorage.setItem("dmx_doi_loi_products", JSON.stringify(State.products));
+    localStorage.setItem(LOCAL_KEYS.PRODUCTS, JSON.stringify(State.products));
   }
 
-  // Load orders
-  const storedOrders = localStorage.getItem("dmx_doi_loi_orders");
+  // Load orders (riêng theo kho)
+  const storedOrders = localStorage.getItem(LOCAL_KEYS.ORDERS);
   if (storedOrders) {
     try {
       State.orders = JSON.parse(storedOrders);
@@ -295,7 +320,7 @@ function initStoredData() {
   }
 
   // Load nhân viên đăng nhập hiện tại
-  const savedStaff = localStorage.getItem("dmx_current_staff");
+  const savedStaff = localStorage.getItem(LOCAL_KEYS.CURRENT_STAFF);
   if (savedStaff) {
     try {
       State.currentStaff = JSON.parse(savedStaff);
@@ -373,7 +398,7 @@ function getActiveStaff() {
   if (State.currentStaff && State.currentStaff.code && State.currentStaff.code !== "ADMIN") {
     return State.currentStaff;
   }
-  const savedStaff = localStorage.getItem("dmx_current_staff");
+  const savedStaff = localStorage.getItem(LOCAL_KEYS.CURRENT_STAFF);
   if (savedStaff) {
     try {
       const parsed = JSON.parse(savedStaff);
@@ -415,7 +440,7 @@ function loginAsStaff(staff) {
     code: staff.code,
     name: staff.name
   };
-  localStorage.setItem("dmx_current_staff", JSON.stringify(State.currentStaff));
+  localStorage.setItem(LOCAL_KEYS.CURRENT_STAFF, JSON.stringify(State.currentStaff));
   localStorage.setItem("dmx_last_staff_code", staff.code);
   updateUserBadgeUI();
   if (DOM.modalLoginStaff) {
@@ -652,7 +677,7 @@ async function handleStaffCrudSubmit(e) {
     const idx = State.staffList.findIndex(s => s.code === origCode);
     if (idx !== -1) {
       State.staffList[idx] = { code, name };
-      localStorage.setItem("dmx_doi_loi_staff", JSON.stringify(State.staffList));
+      localStorage.setItem(LOCAL_KEYS.STAFF, JSON.stringify(State.staffList));
       if (typeof syncStaffToFirebase === "function") {
         await syncStaffToFirebase(State.staffList);
       }
@@ -672,7 +697,7 @@ async function handleStaffCrudSubmit(e) {
     }
 
     State.staffList.push({ code, name });
-    localStorage.setItem("dmx_doi_loi_staff", JSON.stringify(State.staffList));
+    localStorage.setItem(LOCAL_KEYS.STAFF, JSON.stringify(State.staffList));
     if (typeof syncStaffToFirebase === "function") {
       await syncStaffToFirebase(State.staffList);
     }
@@ -693,7 +718,7 @@ async function deleteStaff(code) {
   if (!confirmed) return;
 
   State.staffList = State.staffList.filter(s => s.code !== code);
-  localStorage.setItem("dmx_doi_loi_staff", JSON.stringify(State.staffList));
+  localStorage.setItem(LOCAL_KEYS.STAFF, JSON.stringify(State.staffList));
   if (typeof syncStaffToFirebase === "function") {
     await syncStaffToFirebase(State.staffList);
   }
@@ -713,7 +738,7 @@ async function handleResetDefaultStaff() {
   if (!confirmed) return;
 
   State.staffList = [...INITIAL_STAFF];
-  localStorage.setItem("dmx_doi_loi_staff", JSON.stringify(State.staffList));
+  localStorage.setItem(LOCAL_KEYS.STAFF, JSON.stringify(State.staffList));
   if (typeof syncStaffToFirebase === "function") {
     await syncStaffToFirebase(State.staffList);
   }
@@ -2018,7 +2043,7 @@ function handleFirebaseOrdersUpdated(ordersList) {
     });
   }
   State.orders = ordersList;
-  localStorage.setItem('dmx_doi_loi_orders', JSON.stringify(ordersList));
+  localStorage.setItem(LOCAL_KEYS.ORDERS, JSON.stringify(ordersList));
   fixAdminStaffInOrders();
   updateKPIs();
   renderOrdersTable();
@@ -2026,14 +2051,14 @@ function handleFirebaseOrdersUpdated(ordersList) {
 
 function handleFirebaseProductsUpdated(productsList) {
   State.products = productsList;
-  localStorage.setItem('dmx_doi_loi_products', JSON.stringify(productsList));
+  localStorage.setItem(LOCAL_KEYS.PRODUCTS, JSON.stringify(productsList));
   updateKPIs();
 }
 
 function handleFirebaseStaffUpdated(staffList) {
   if (Array.isArray(staffList) && staffList.length > 0) {
     State.staffList = staffList;
-    localStorage.setItem("dmx_doi_loi_staff", JSON.stringify(staffList));
+    localStorage.setItem(LOCAL_KEYS.STAFF, JSON.stringify(staffList));
     renderStaffFilterOptions();
     renderStaffChipsInModal();
     if (DOM.modalManageStaff && DOM.modalManageStaff.style.display !== "none") {
@@ -2109,3 +2134,128 @@ function playSuccessSound() {
     osc.stop(audioCtx.currentTime + 0.2);
   } catch(e) {}
 }
+
+// ==============================================================================
+// 13. MULTI-BRANCH / ĐA KHO SWITCHER & SHARER
+// ==============================================================================
+function initBranchSwitcher() {
+  if (!DOM.btnBranchSwitcher || !DOM.modalBranchSwitcher) return;
+
+  const branchId = (typeof CURRENT_BRANCH !== "undefined") ? CURRENT_BRANCH : "default";
+  const isDefault = (typeof IS_DEFAULT_BRANCH !== "undefined") ? IS_DEFAULT_BRANCH : true;
+
+  // Cập nhật nhãn trên header badge
+  const branchDisplayName = isDefault ? "Mặc định" : branchId.toUpperCase();
+  if (DOM.currentBranchLabel) {
+    DOM.currentBranchLabel.textContent = `🏪 Kho: ${branchDisplayName}`;
+  }
+
+  // Cập nhật tên kho trong modal
+  if (DOM.modalCurrentBranchName) {
+    DOM.modalCurrentBranchName.textContent = isDefault 
+      ? "Kho: Mặc định (Kho chính)" 
+      : `Kho: ${branchId.toUpperCase()}`;
+  }
+
+  // Tạo URL chia sẻ chuẩn
+  const currentOrigin = window.location.origin;
+  const currentPath = window.location.pathname;
+  const shareUrl = isDefault 
+    ? `${currentOrigin}${currentPath}`
+    : `${currentOrigin}${currentPath}?kho=${encodeURIComponent(branchId)}`;
+
+  if (DOM.inputShareBranchUrl) {
+    DOM.inputShareBranchUrl.value = shareUrl;
+  }
+
+  // Highlight shortcut pill tương ứng
+  const pills = [
+    { el: DOM.linkKhoDefault, id: "default" },
+    { el: DOM.linkKho2, id: "2" },
+    { el: DOM.linkKho3, id: "3" },
+    { el: DOM.linkKhoShopB, id: "shop-b" }
+  ];
+  pills.forEach(p => {
+    if (p.el) {
+      if ((isDefault && p.id === "default") || (!isDefault && branchId === p.id)) {
+        p.el.classList.add("active");
+        p.el.style.borderColor = "var(--primary)";
+        p.el.style.background = "rgba(2, 132, 199, 0.12)";
+        p.el.style.fontWeight = "700";
+      }
+    }
+  });
+
+  // Mở modal khi bấm badge kho ở header
+  DOM.btnBranchSwitcher.addEventListener("click", () => {
+    openModal(DOM.modalBranchSwitcher);
+  });
+
+  // Đóng modal
+  if (DOM.btnCloseBranchModal) {
+    DOM.btnCloseBranchModal.addEventListener("click", () => {
+      closeModal(DOM.modalBranchSwitcher);
+    });
+  }
+  if (DOM.btnCloseBranchModalFooter) {
+    DOM.btnCloseBranchModalFooter.addEventListener("click", () => {
+      closeModal(DOM.modalBranchSwitcher);
+    });
+  }
+  DOM.modalBranchSwitcher.addEventListener("click", (e) => {
+    if (e.target === DOM.modalBranchSwitcher) {
+      closeModal(DOM.modalBranchSwitcher);
+    }
+  });
+
+  // Sao chép link kho chia sẻ
+  if (DOM.btnCopyShareBranchUrl && DOM.inputShareBranchUrl) {
+    DOM.btnCopyShareBranchUrl.addEventListener("click", async () => {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(DOM.inputShareBranchUrl.value);
+        } else {
+          DOM.inputShareBranchUrl.select();
+          document.execCommand("copy");
+        }
+        playSuccessSound();
+        showToast("📋 Đã sao chép link kho! Gửi link này để người khác sử dụng dữ liệu kho riêng.", "success");
+      } catch (err) {
+        DOM.inputShareBranchUrl.select();
+        showToast("Vui lòng nhấn Ctrl+C (hoặc Cmd+C) để chép link!", "info");
+      }
+    });
+  }
+
+  // Điều hướng sang kho mới
+  function navigateToNewBranch() {
+    const rawInput = DOM.inputNewBranchCode ? DOM.inputNewBranchCode.value.trim() : "";
+    if (!rawInput) {
+      showToast("Vui lòng nhập tên hoặc mã kho muốn mở!", "warning");
+      if (DOM.inputNewBranchCode) DOM.inputNewBranchCode.focus();
+      return;
+    }
+
+    const cleanBranch = rawInput.toLowerCase().replace(/[^a-z0-9_-]/g, "");
+    if (!cleanBranch || cleanBranch === "default" || cleanBranch === "1" || cleanBranch === "main") {
+      localStorage.setItem("dmx_active_branch", "default");
+      window.location.href = `${currentOrigin}${currentPath}`;
+    } else {
+      localStorage.setItem("dmx_active_branch", cleanBranch);
+      window.location.href = `${currentOrigin}${currentPath}?kho=${encodeURIComponent(cleanBranch)}`;
+    }
+  }
+
+  if (DOM.btnGoToBranch) {
+    DOM.btnGoToBranch.addEventListener("click", navigateToNewBranch);
+  }
+  if (DOM.inputNewBranchCode) {
+    DOM.inputNewBranchCode.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        navigateToNewBranch();
+      }
+    });
+  }
+}
+

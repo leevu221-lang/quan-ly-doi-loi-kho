@@ -31,7 +31,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <!-- Main Stylesheet (Cache-busted) -->
-  <link rel="stylesheet" href="style.css?v=4.5">
+  <link rel="stylesheet" href="style.css?v=4.6">
 </head>
 <body class="theme-light">
 
@@ -52,7 +52,13 @@
         </div>
         <div class="brand-info">
           <div class="badge-mini">DỊCH VỤ KHÁCH HÀNG & KHO SIÊU THỊ</div>
-          <h1 class="brand-title">Quản Lý Nhập Đổi Lỗi & Kho</h1>
+          <div class="brand-title-wrap">
+            <h1 class="brand-title">Quản Lý Nhập Đổi Lỗi & Kho</h1>
+            <button type="button" class="branch-pill-badge" id="btnBranchSwitcher" title="Bấm để xem link chia sẻ hoặc chuyển đổi kho">
+              <span id="currentBranchLabel">🏪 Kho: Mặc định</span>
+              <span style="font-size: 10px; opacity: 0.7;">▾</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -903,6 +909,64 @@
     </div>
   </div>
 
+  <!-- Modal Quản lý & Chia sẻ Kho -->
+  <div class="modal-overlay" id="modalBranchSwitcher" style="display: none;">
+    <div class="modal-card modal-md">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon-badge" style="background: rgba(2, 132, 199, 0.1); color: var(--primary);">🏪</div>
+          <div>
+            <h3 class="modal-heading">Nhân Bản & Chia Sẻ Kho Hàng</h3>
+            <p class="modal-subheading">Tách dữ liệu đơn hàng và nhân viên hoàn toàn độc lập cho người khác sử dụng</p>
+          </div>
+        </div>
+        <button class="btn-close-modal" id="btnCloseBranchModal">✕</button>
+      </div>
+
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 16px;">
+        <div style="background: var(--bg-surface-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px;">
+          <div style="font-size: 11.5px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Kho dữ liệu đang mở trên máy này:</div>
+          <div style="font-size: 17px; font-weight: 800; color: var(--primary); margin-top: 4px;" id="modalCurrentBranchName">Kho: Mặc định</div>
+        </div>
+
+        <div>
+          <label class="form-label" style="font-weight: 700;">🔗 Link truy cập kho này để gửi cho người khác:</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="inputShareBranchUrl" class="form-control" readonly style="font-family: var(--font-mono); font-size: 12px; background: var(--bg-surface-subtle);" />
+            <button type="button" class="btn btn-primary" id="btnCopyShareBranchUrl" style="flex-shrink: 0;">
+              📋 Sao chép
+            </button>
+          </div>
+          <div class="form-hint" style="margin-top: 6px;">Người nhận mở link này sẽ có một kho riêng biệt, không xem hoặc sửa được đơn của bạn.</div>
+        </div>
+
+        <div style="border-top: 1px solid var(--border-color); padding-top: 14px;">
+          <label class="form-label" style="font-weight: 700;">➕ Chuyển đổi hoặc mở kho mới:</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="inputNewBranchCode" class="form-control" placeholder="Nhập tên/mã kho (VD: 2, 3, shop-b, kho-dien-may)..." />
+            <button type="button" class="btn btn-outline" id="btnGoToBranch" style="flex-shrink: 0;">
+              🚀 Mở kho
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px;">Lối tắt nhanh các kho:</div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <a href="index.html" class="pill" id="linkKhoDefault">🏠 Kho chính (Mặc định)</a>
+            <a href="index.html?kho=2" class="pill" id="linkKho2">🏪 Kho 2</a>
+            <a href="index.html?kho=3" class="pill" id="linkKho3">🏪 Kho 3</a>
+            <a href="index.html?kho=shop-b" class="pill" id="linkKhoShopB">🏪 Shop B</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" id="btnCloseBranchModalFooter">Đóng</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Box -->
   <div class="toast-box" id="toastBox">
     <span class="toast-icon" id="toastIcon">✅</span>
@@ -910,7 +974,7 @@
   </div>
 
   <!-- Application Logic Scripts (Cache-busted) -->
-  <script src="firebase-config.js?v=4.5"></script>
-  <script src="app.js?v=4.5"></script>
+  <script src="firebase-config.js?v=4.6"></script>
+  <script src="app.js?v=4.6"></script>
 </body>
 </html>
