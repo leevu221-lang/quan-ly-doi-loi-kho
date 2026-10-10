@@ -594,6 +594,14 @@ body.theme-dark .icon-indigo { background: rgba(99, 102, 241, 0.2); color: #818c
   font-size: 12.5px;
 }
 
+.btn-xs {
+  padding: 2px 8px;
+  font-size: 11px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
 .btn-primary {
   background: var(--primary);
   color: #fff;

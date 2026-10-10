@@ -935,6 +935,11 @@ function openWarehouseConfirmModal(orderCode) {
     saveOrderToFirebase(order);
   }
 
+  const activeStaff = getActiveStaff();
+  const currentConfirmedBy = State.currentUser.role === "admin" 
+    ? "Quản trị viên (Admin)" 
+    : `${activeStaff.name} (${activeStaff.code})`;
+
   DOM.confirmOrderSummary.innerHTML = `
     <div class="confirm-summary-row">
       <span class="label">Mã phiếu đổi lỗi:</span>
@@ -948,15 +953,41 @@ function openWarehouseConfirmModal(orderCode) {
       <span class="label">Khách hàng:</span>
       <span class="val">${escapeHtml(formatTitleCase(order.customerName))} (${escapeHtml(order.customerPhone)})</span>
     </div>
-    <div class="confirm-summary-row">
-      <span class="label">Nhân viên tiếp nhận:</span>
-      <span class="val font-semibold text-success">👤 ${escapeHtml(order.staffName)} ${order.staffCode ? `(${escapeHtml(order.staffCode)})` : ''}</span>
+    <div class="confirm-summary-row" style="align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+      <span class="label">1. Nhân viên tiếp nhận (quầy):</span>
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <span class="val font-semibold text-secondary" id="confirmSummaryStaff">👤 ${escapeHtml(order.staffName)} ${order.staffCode ? `(${escapeHtml(order.staffCode)})` : ''}</span>
+        ${(order.staffCode !== activeStaff.code && State.currentUser.role !== "guest") ? `
+          <button type="button" class="btn btn-outline btn-xs" id="btnReassignToActiveStaff" title="Gán nhân viên tiếp nhận cho người đang đăng nhập" style="padding: 2px 8px; font-size: 11px; border-color: var(--primary); color: var(--primary);">
+            🔄 Gán cho: ${escapeHtml(activeStaff.name)}
+          </button>
+        ` : ''}
+      </div>
+    </div>
+    <div class="confirm-summary-row" style="background: rgba(16, 185, 129, 0.08); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px dashed rgba(16, 185, 129, 0.4);">
+      <span class="label" style="color: var(--text-main); font-weight: 600;">2. Người xác nhận nhập kho:</span>
+      <span class="val font-semibold text-success">🏢 ${escapeHtml(currentConfirmedBy)} (Đang đăng nhập)</span>
     </div>
     <div class="confirm-summary-row">
       <span class="label">Hiện tại:</span>
       <span class="val text-amber font-mono">⚠️ CHƯA VỀ KHO (Tại quầy)</span>
     </div>
   `;
+
+  const btnReassign = document.getElementById("btnReassignToActiveStaff");
+  if (btnReassign) {
+    btnReassign.addEventListener("click", async () => {
+      order.staffCode = activeStaff.code;
+      order.staffName = activeStaff.name;
+      await saveOrderToFirebase(order);
+      renderOrdersTable();
+      updateKPIs();
+      const elStaff = document.getElementById("confirmSummaryStaff");
+      if (elStaff) elStaff.textContent = `👤 ${order.staffName} (${order.staffCode})`;
+      btnReassign.style.display = "none";
+      showToast(`✅ Đã chuyển nhân viên tiếp nhận sang ${activeStaff.name}!`, "success");
+    });
+  }
 
   DOM.inputWarehouseLocation.value = "Kệ hàng lỗi đổi trả";
   DOM.inputWarehouseNotes.value = "";
@@ -1425,7 +1456,8 @@ function renderOrdersTable() {
           ${isReceived 
             ? `<span class="status-badge badge-received" title="Đã nhập kho: ${escapeHtml(o.warehouseDisplayTime || '')} - Người nhận: ${escapeHtml(o.warehouseConfirmedBy || '')}">
                 ✅ Đã về kho
-               </span>`
+               </span>
+               ${o.warehouseConfirmedBy ? `<div style="font-size: 11px; color: var(--text-muted); margin-top: 3px; font-weight: 500;">🏢 ${escapeHtml(o.warehouseConfirmedBy)}</div>` : ''}`
             : `<span class="status-badge badge-pending" title="Hàng đang để tại quầy siêu thị, chưa chuyển về kho">
                 ⚠️ Chưa về kho
                </span>`
