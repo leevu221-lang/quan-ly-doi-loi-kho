@@ -307,21 +307,28 @@
   <!-- ======================================================== -->
   <!-- MODAL 1: ĐĂNG NHẬP NHÂN VIÊN (AUTOCOMPLETE - KHÔNG CẦN PASSWORD) -->
   <!-- ======================================================== -->
-  <div class="modal-overlay" id="modalLoginStaff" style="display: none;">
+  <div class="modal-overlay is-gate" id="modalLoginStaff" style="display: flex;">
     <div class="modal-card modal-md">
       <div class="modal-header">
         <div class="modal-title-group">
           <div class="modal-icon-badge">👤</div>
           <div>
             <h3 class="modal-heading">Đăng Nhập Nhân Viên</h3>
-            <p class="modal-subheading">Gõ mã hoặc tên nhân viên để đăng nhập ngay (không cần mật khẩu)</p>
+            <p class="modal-subheading">Chọn hoặc tìm tên của bạn để bắt đầu làm việc (không cần mật khẩu)</p>
           </div>
         </div>
-        <button class="btn-close-modal" id="btnCloseStaffLogin">✕</button>
+        <button class="btn-close-modal" id="btnCloseStaffLogin" title="Đóng">✕</button>
       </div>
 
       <div class="modal-body">
-        <div class="form-group">
+        <div class="gate-welcome-banner" id="gateWelcomeBanner">
+          <div class="gate-banner-icon">👋</div>
+          <div>
+            <strong>Xin chào!</strong> Vui lòng chọn tài khoản nhân viên của bạn trước khi vào web quản lý đổi lỗi siêu thị.
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 10px;">
           <label class="form-label" for="staffSearchInput">Tìm mã nhân viên hoặc tên của bạn:</label>
           <div class="input-search-box">
             <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -344,6 +351,15 @@
         <div class="staff-quick-pick">
           <div class="quick-pick-title">Hoặc chọn nhanh từ danh sách 10 nhân viên siêu thị:</div>
           <div class="staff-chips-grid" id="staffChipsList"></div>
+        </div>
+
+        <div class="modal-footer-gate">
+          <div class="gate-note">
+            <span>🛡️ Bạn là Quản lý / Thủ kho?</span>
+          </div>
+          <button type="button" class="btn btn-outline btn-sm" id="btnSwitchToAdminLogin">
+            <span>Đăng nhập Quản trị viên (Admin)</span>
+          </button>
         </div>
       </div>
     </div>
@@ -384,6 +400,11 @@
             <button type="submit" class="btn btn-primary" id="btnSubmitAdminLogin">Đăng nhập Admin</button>
           </div>
         </form>
+        <div style="margin-top: 14px; text-align: center; border-top: 1px dashed var(--border-color); padding-top: 12px;">
+          <button type="button" class="btn btn-ghost btn-sm" id="btnSwitchToStaffLogin" style="color: var(--primary); font-size: 0.88rem; font-weight: 600;">
+            ← Quay lại chọn Nhân viên
+          </button>
+        </div>
       </div>
     </div>
   </div>

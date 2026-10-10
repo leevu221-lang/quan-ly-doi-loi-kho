@@ -79,12 +79,14 @@ document.addEventListener("DOMContentLoaded", () => {
   cacheDOMElements();
   initTheme();
   initStoredData();
-  initUserSession();
   setupEventListeners();
   renderStaffFilterOptions();
   renderStaffChipsInModal();
   updateKPIs();
   renderOrdersTable();
+
+  // Bắt buộc hiển thị màn hình chọn nhân viên mỗi lần mở link web trước khi vào ứng dụng
+  showStaffSelectionGate();
 
   // Khởi động kết nối đồng bộ Firebase
   initFirebaseService(
@@ -139,17 +141,20 @@ function cacheDOMElements() {
   DOM.btnOpenExcelModal = document.getElementById("btnOpenExcelModal");
   DOM.btnExportOrdersExcel = document.getElementById("btnExportOrdersExcel");
 
-  // Modal Login Staff
+  // Modal Login Staff (Gate)
   DOM.modalLoginStaff = document.getElementById("modalLoginStaff");
   DOM.btnCloseStaffLogin = document.getElementById("btnCloseStaffLogin");
   DOM.staffSearchInput = document.getElementById("staffSearchInput");
   DOM.staffSuggestionsDropdown = document.getElementById("staffSuggestionsDropdown");
   DOM.staffChipsList = document.getElementById("staffChipsList");
+  DOM.btnSwitchToAdminLogin = document.getElementById("btnSwitchToAdminLogin");
+  DOM.gateWelcomeBanner = document.getElementById("gateWelcomeBanner");
 
   // Modal Login Admin
   DOM.modalLoginAdmin = document.getElementById("modalLoginAdmin");
   DOM.btnCloseAdminLogin = document.getElementById("btnCloseAdminLogin");
   DOM.btnCancelAdminLogin = document.getElementById("btnCancelAdminLogin");
+  DOM.btnSwitchToStaffLogin = document.getElementById("btnSwitchToStaffLogin");
   DOM.adminLoginForm = document.getElementById("adminLoginForm");
   DOM.adminPasswordInput = document.getElementById("adminPasswordInput");
 
@@ -247,20 +252,24 @@ function initStoredData() {
   }
 }
 
-function initUserSession() {
-  const savedSession = localStorage.getItem("dmx_doi_loi_auth");
-  if (savedSession) {
-    try {
-      State.currentUser = JSON.parse(savedSession);
-    } catch(e) {
-      State.currentUser = { role: "guest", code: "", name: "" };
-    }
-  }
+// Bắt buộc hiển thị màn hình chọn nhân viên mỗi khi mở web
+function showStaffSelectionGate() {
+  State.currentUser = { role: "guest", code: "", name: "" };
   updateUserBadgeUI();
+  if (DOM.modalLoginStaff) {
+    DOM.modalLoginStaff.classList.add("is-gate");
+    openModal(DOM.modalLoginStaff);
+    if (DOM.staffSearchInput) {
+      DOM.staffSearchInput.value = "";
+      if (DOM.staffSuggestionsDropdown) DOM.staffSuggestionsDropdown.style.display = "none";
+      setTimeout(() => DOM.staffSearchInput.focus(), 250);
+    }
+    renderStaffChipsInModal();
+  }
 }
 
 // ==============================================================================
-// 3. AUTHENTICATION (NHÂN VIÊN: AUTOCOMPLETE KHÔNG PASS | ADMIN: PASS 43751)
+// 3. AUTHENTICATION (NHÂN VIÊN: CHỌN / AUTOCOMPLETE KHÔNG PASS | ADMIN: PASS 43751)
 // ==============================================================================
 function updateUserBadgeUI() {
   const u = State.currentUser;
@@ -285,7 +294,7 @@ function updateUserBadgeUI() {
   } else {
     DOM.btnUserBadge.classList.add("role-guest");
     DOM.userBadgeIcon.textContent = "👤";
-    DOM.userBadgeRole.textContent = "Chưa đăng nhập";
+    DOM.userBadgeRole.textContent = "Chưa chọn NV";
     DOM.userBadgeName.textContent = "Bấm để chọn nhân viên";
     DOM.btnMenuLogout.style.display = "none";
     DOM.dropdownDividerLogout.style.display = "none";
@@ -299,11 +308,15 @@ function loginAsStaff(staff) {
     code: staff.code,
     name: staff.name
   };
-  localStorage.setItem("dmx_doi_loi_auth", JSON.stringify(State.currentUser));
+  localStorage.setItem("dmx_last_staff_code", staff.code);
   updateUserBadgeUI();
-  closeModal(DOM.modalLoginStaff);
+  if (DOM.modalLoginStaff) {
+    DOM.modalLoginStaff.classList.remove("is-gate");
+    closeModal(DOM.modalLoginStaff);
+  }
   DOM.userDropdownMenu.style.display = "none";
-  showToast(`Chào bạn, ${staff.name} (${staff.code})! Đăng nhập thành công.`, "success");
+  playSuccessSound();
+  showToast(`👋 Chào bạn, ${staff.name} (${staff.code})! Đăng nhập thành công.`, "success");
 }
 
 function loginAsAdmin() {
@@ -312,32 +325,37 @@ function loginAsAdmin() {
     code: "ADMIN",
     name: "Quản Trị Viên (Admin)"
   };
-  localStorage.setItem("dmx_doi_loi_auth", JSON.stringify(State.currentUser));
   updateUserBadgeUI();
-  closeModal(DOM.modalLoginAdmin);
+  if (DOM.modalLoginAdmin) closeModal(DOM.modalLoginAdmin);
+  if (DOM.modalLoginStaff) DOM.modalLoginStaff.classList.remove("is-gate");
   DOM.userDropdownMenu.style.display = "none";
-  showToast("Đăng nhập quyền Admin thành công!", "success");
+  playSuccessSound();
+  showToast("🛡️ Đăng nhập quyền Quản trị viên (Admin) thành công!", "success");
 }
 
 function logout() {
   State.currentUser = { role: "guest", code: "", name: "" };
-  localStorage.removeItem("dmx_doi_loi_auth");
   updateUserBadgeUI();
   DOM.userDropdownMenu.style.display = "none";
   showToast("Đã đăng xuất tài khoản", "info");
+  showStaffSelectionGate();
 }
 
 // Render 10 chip nhân viên để chọn 1-chạm trong modal đăng nhập
 function renderStaffChipsInModal() {
-  DOM.staffChipsList.innerHTML = State.staffList.map(st => `
-    <button type="button" class="staff-chip-btn" data-code="${st.code}">
-      <span class="staff-chip-avatar">${st.name.charAt(0)}</span>
-      <div>
-        <span class="staff-chip-user">${st.code}</span>
-        <span class="staff-chip-name">${st.name}</span>
-      </div>
-    </button>
-  `).join("");
+  const lastCode = localStorage.getItem("dmx_last_staff_code") || "";
+  DOM.staffChipsList.innerHTML = State.staffList.map(st => {
+    const isRecent = st.code === lastCode ? " is-recent" : "";
+    return `
+      <button type="button" class="staff-chip-btn${isRecent}" data-code="${st.code}" title="Bấm để đăng nhập ngay">
+        <span class="staff-chip-avatar">${st.name.charAt(0)}</span>
+        <div>
+          <span class="staff-chip-user">${st.code}</span>
+          <span class="staff-chip-name">${st.name}</span>
+        </div>
+      </button>
+    `;
+  }).join("");
 
   DOM.staffChipsList.querySelectorAll(".staff-chip-btn").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -348,9 +366,26 @@ function renderStaffChipsInModal() {
   });
 }
 
-// Tìm kiếm autocomplete nhân viên (không cần password)
+// Tìm kiếm autocomplete nhân viên (không cần password) & lọc trực tiếp các thẻ bên dưới
 function handleStaffSearchAutocomplete(query) {
   const cleanQ = removeVietnameseTones((query || "").trim().toLowerCase());
+
+  // Lọc trực tiếp 10 thẻ nhân viên bên dưới theo từ khóa
+  if (DOM.staffChipsList) {
+    const chipBtns = DOM.staffChipsList.querySelectorAll(".staff-chip-btn");
+    chipBtns.forEach(btn => {
+      const code = btn.getAttribute("data-code");
+      const staff = State.staffList.find(s => s.code === code);
+      if (!cleanQ) {
+        btn.style.display = "flex";
+      } else if (staff) {
+        const match = staff.code.toLowerCase().includes(cleanQ) || 
+                      removeVietnameseTones(staff.name.toLowerCase()).includes(cleanQ);
+        btn.style.display = match ? "flex" : "none";
+      }
+    });
+  }
+
   if (!cleanQ) {
     DOM.staffSuggestionsDropdown.style.display = "none";
     return;
@@ -1185,7 +1220,10 @@ function setupEventListeners() {
 
   DOM.btnMenuLoginStaff.addEventListener("click", () => {
     DOM.userDropdownMenu.style.display = "none";
+    DOM.modalLoginStaff.classList.remove("is-gate");
     openModal(DOM.modalLoginStaff);
+    DOM.staffSearchInput.value = "";
+    handleStaffSearchAutocomplete("");
     DOM.staffSearchInput.focus();
   });
 
@@ -1198,9 +1236,23 @@ function setupEventListeners() {
 
   DOM.btnMenuLogout.addEventListener("click", logout);
 
-  // Staff search autocomplete
+  // Staff search autocomplete & Enter to submit
   DOM.staffSearchInput.addEventListener("input", (e) => {
     handleStaffSearchAutocomplete(e.target.value);
+  });
+  DOM.staffSearchInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const cleanQ = removeVietnameseTones((DOM.staffSearchInput.value || "").trim().toLowerCase());
+      if (!cleanQ) return;
+      const match = State.staffList.find(s => 
+        s.code.toLowerCase().includes(cleanQ) || 
+        removeVietnameseTones(s.name.toLowerCase()).includes(cleanQ)
+      );
+      if (match) {
+        loginAsStaff(match);
+      }
+    }
   });
 
   // Admin login form submit
@@ -1353,10 +1405,58 @@ function setupEventListeners() {
   // Export orders to Excel
   DOM.btnExportOrdersExcel.addEventListener("click", exportOrdersToExcel);
 
+  // Switch giữa Nhân viên và Admin
+  if (DOM.btnSwitchToAdminLogin) {
+    DOM.btnSwitchToAdminLogin.addEventListener("click", () => {
+      closeModal(DOM.modalLoginStaff);
+      openModal(DOM.modalLoginAdmin);
+      DOM.adminPasswordInput.value = "";
+      DOM.adminPasswordInput.focus();
+    });
+  }
+  if (DOM.btnSwitchToStaffLogin) {
+    DOM.btnSwitchToStaffLogin.addEventListener("click", () => {
+      closeModal(DOM.modalLoginAdmin);
+      openModal(DOM.modalLoginStaff);
+      DOM.staffSearchInput.focus();
+    });
+  }
+
   // Modal Close buttons
-  DOM.btnCloseStaffLogin.addEventListener("click", () => closeModal(DOM.modalLoginStaff));
-  DOM.btnCloseAdminLogin.addEventListener("click", () => closeModal(DOM.modalLoginAdmin));
-  DOM.btnCancelAdminLogin.addEventListener("click", () => closeModal(DOM.modalLoginAdmin));
+  DOM.btnCloseStaffLogin.addEventListener("click", () => {
+    if (DOM.modalLoginStaff.classList.contains("is-gate") || State.currentUser.role === "guest") {
+      shakeModal(DOM.modalLoginStaff);
+      showToast("Vui lòng chọn tài khoản nhân viên của bạn trước khi vào web!", "warning");
+      return;
+    }
+    closeModal(DOM.modalLoginStaff);
+  });
+
+  DOM.btnCloseAdminLogin.addEventListener("click", () => {
+    closeModal(DOM.modalLoginAdmin);
+    if (State.currentUser.role === "guest") {
+      openModal(DOM.modalLoginStaff);
+    }
+  });
+
+  DOM.btnCancelAdminLogin.addEventListener("click", () => {
+    closeModal(DOM.modalLoginAdmin);
+    if (State.currentUser.role === "guest") {
+      openModal(DOM.modalLoginStaff);
+    }
+  });
+
+  // Chặn click ngoài vùng modal khi chưa chọn nhân viên
+  [DOM.modalLoginStaff, DOM.modalLoginAdmin].forEach(modal => {
+    if (modal) {
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal && State.currentUser.role === "guest") {
+          shakeModal(modal);
+          showToast("Vui lòng chọn nhân viên hoặc đăng nhập Admin để vào web!", "warning");
+        }
+      });
+    }
+  });
 }
 
 // Modal Helper functions
@@ -1365,6 +1465,17 @@ function openModal(modalEl) {
 }
 function closeModal(modalEl) {
   if (modalEl) modalEl.style.display = "none";
+}
+
+function shakeModal(modalEl) {
+  if (!modalEl) return;
+  const card = modalEl.querySelector(".modal-card");
+  if (card) {
+    card.classList.remove("shake");
+    void card.offsetWidth; // trigger reflow
+    card.classList.add("shake");
+    setTimeout(() => card.classList.remove("shake"), 400);
+  }
 }
 
 // ==============================================================================
