@@ -1309,14 +1309,15 @@ function exportOrdersToExcel() {
       "NHÂN VIÊN TẠO PHIẾU",
       "MÃ NV TẠO",
       "NHÂN VIÊN NHẬN HÀNG LỖI",
+      "THỜI GIAN NHẬN KHO",
       "TRẠNG THÁI VỀ KHO",
-      "NGÀY GIỜ VỀ KHO",
       "VỊ TRÍ LƯU KHO",
       "GHI CHÚ KHO"
     ]
   ];
 
   State.orders.forEach(o => {
+    const rawWhTime = o.warehouseDisplayTime || (o.warehouseTime ? formatDateTime(o.warehouseTime) : "");
     exportRows.push([
       o.orderCode,
       o.displayTime || formatDateTime(o.createdAt),
@@ -1328,8 +1329,8 @@ function exportOrdersToExcel() {
       o.staffName,
       o.staffCode,
       o.warehouseConfirmedBy || (o.warehouseStatus === "DA_VE_KHO" ? "Đã nhận kho" : "Chưa nhận kho"),
+      rawWhTime,
       o.warehouseStatus === "DA_VE_KHO" ? "ĐÃ VỀ KHO" : "CHƯA VỀ KHO",
-      o.warehouseDisplayTime || (o.warehouseTime ? formatDateTime(o.warehouseTime) : ""),
       o.warehouseLocation || "",
       o.warehouseNotes || ""
     ]);
@@ -1416,6 +1417,19 @@ function renderOrdersTable() {
 
   DOM.ordersTableBody.innerHTML = filtered.map((o, idx) => {
     const isReceived = (o.warehouseStatus === "DA_VE_KHO");
+    const rawWhTime = o.warehouseDisplayTime || (o.warehouseTime ? formatDateTime(o.warehouseTime) : "");
+    let whTimeTxt = "";
+    let whDateTxt = "";
+    if (rawWhTime) {
+      const parts = rawWhTime.trim().split(" ");
+      if (parts.length >= 2) {
+        whTimeTxt = parts[0];
+        whDateTxt = parts.slice(1).join(" ");
+      } else {
+        whTimeTxt = rawWhTime;
+        whDateTxt = "";
+      }
+    }
     
     return `
       <tr class="${isReceived ? 'row-received' : 'row-pending'}">
@@ -1472,6 +1486,17 @@ function renderOrdersTable() {
             : `<span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--text-muted); padding: 3px 8px; border-radius: var(--radius-sm); background: var(--bg-surface-subtle); border: 1px dashed var(--border-color);" title="Chưa nhập kho">
                 ⏳ Chưa nhận
                </span>`
+          }
+        </td>
+
+        <!-- Thời gian nhận -->
+        <td>
+          ${rawWhTime 
+            ? `<div class="wh-time-box" title="Thời gian xác nhận hàng về kho: ${escapeHtml(rawWhTime)}">
+                <span class="wh-time-val">${escapeHtml(whTimeTxt)}</span>
+                ${whDateTxt ? `<span class="wh-date-val">${escapeHtml(whDateTxt)}</span>` : ''}
+               </div>`
+            : `<span class="wh-time-pending" title="Chưa nhận về kho">Chưa nhận</span>`
           }
         </td>
 
