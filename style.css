@@ -1972,3 +1972,27 @@ body.is-admin .admin-only {
 body.is-admin .admin-only-item {
   display: flex !important;
 }
+
+/* ==============================================================================
+   FOOTER CREDITS
+   ============================================================================== */
+.app-footer {
+  text-align: center;
+  padding: 32px 16px 48px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.4px;
+}
+
+.app-footer .copyright-txt {
+  margin: 0;
+  display: inline-block;
+  opacity: 0.75;
+  transition: opacity 0.2s ease;
+}
+
+.app-footer .copyright-txt:hover {
+  opacity: 1;
+  color: var(--text-main);
+}
