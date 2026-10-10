@@ -9,6 +9,11 @@
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230284c7'><path d='M20 7h-4V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v3H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm-6-3v3h-4V4h4zm6 16H4V9h16v11z'/></svg>">
   <meta name="theme-color" content="#0284c7">
+  
+  <!-- Anti-caching headers for GitHub Pages updates -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,8 +30,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-  <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="style.css">
+  <!-- Main Stylesheet (Cache-busted) -->
+  <link rel="stylesheet" href="style.css?v=3.0">
 </head>
 <body class="theme-light">
 
@@ -891,8 +896,8 @@
     <span class="toast-message" id="toastMessage">Thông báo</span>
   </div>
 
-  <!-- Application Logic Scripts -->
-  <script src="firebase-config.js"></script>
-  <script src="app.js"></script>
+  <!-- Application Logic Scripts (Cache-busted) -->
+  <script src="firebase-config.js?v=3.0"></script>
+  <script src="app.js?v=3.0"></script>
 </body>
 </html>
