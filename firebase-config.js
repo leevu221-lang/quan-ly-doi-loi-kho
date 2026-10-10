@@ -277,6 +277,33 @@ async function deleteOrderFromFirebase(orderCode) {
   }
 }
 
+// Xóa toàn bộ danh sách đơn hàng khỏi Firebase (Chỉ quyền Admin)
+async function deleteAllOrdersFromFirebase() {
+  // Xóa sạch ở localStorage của kho hiện tại
+  localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify([]));
+
+  if (firestoreDb) {
+    try {
+      const snapshot = await firestoreDb.collection(COLLECTIONS.ORDERS).get();
+      if (!snapshot.empty) {
+        const docs = snapshot.docs;
+        // Firestore batch tối đa 500 documents mỗi lần commit
+        for (let i = 0; i < docs.length; i += 400) {
+          const chunk = docs.slice(i, i + 400);
+          const batch = firestoreDb.batch();
+          chunk.forEach(doc => batch.delete(doc.ref));
+          await batch.commit();
+        }
+      }
+      return { success: true };
+    } catch (e) {
+      console.warn('Firestore deleteAllOrders error:', e);
+    }
+  }
+
+  return { success: true };
+}
+
 // Đồng bộ danh mục sản phẩm Excel lên Firebase
 async function syncProductsToFirebase(productsList) {
   localStorage.setItem('dmx_doi_loi_products', JSON.stringify(productsList));

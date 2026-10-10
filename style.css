@@ -2308,3 +2308,24 @@ body.is-admin .admin-only-item {
   opacity: 1;
   color: var(--text-main);
 }
+
+/* Danger Outline Button (Dành cho chức năng Xóa) */
+.btn-danger-outline {
+  border-color: rgba(239, 68, 68, 0.4) !important;
+  color: #ef4444 !important;
+}
+.btn-danger-outline:hover {
+  background: rgba(239, 68, 68, 0.08) !important;
+  border-color: #ef4444 !important;
+  color: #dc2626 !important;
+}
+body.theme-dark .btn-danger-outline {
+  border-color: rgba(248, 113, 113, 0.4) !important;
+  color: #f87171 !important;
+}
+body.theme-dark .btn-danger-outline:hover {
+  background: rgba(248, 113, 113, 0.12) !important;
+  border-color: #f87171 !important;
+  color: #fca5a5 !important;
+}
+

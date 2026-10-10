@@ -171,6 +171,7 @@ function cacheDOMElements() {
   DOM.btnOpenNewOrderModal = document.getElementById("btnOpenNewOrderModal");
   DOM.btnOpenExcelModal = document.getElementById("btnOpenExcelModal");
   DOM.btnExportOrdersExcel = document.getElementById("btnExportOrdersExcel");
+  DOM.btnClearAllOrders = document.getElementById("btnClearAllOrders");
 
   // Modal Login Staff (Gate)
   DOM.modalLoginStaff = document.getElementById("modalLoginStaff");
@@ -1140,6 +1141,46 @@ async function handleDeleteOrder(orderCode) {
   showToast(`Đã xóa đơn ${orderCode}`, "success");
 }
 
+// Xóa toàn bộ danh sách đơn trong "Danh Sách Hàng Hoá Nhập Đổi Lỗi" (Chỉ quyền Admin)
+async function handleClearAllOrders() {
+  if (State.currentUser.role !== "admin") {
+    showToast("Chỉ tài khoản Quản trị viên (Admin) mới có quyền xóa danh sách đơn!", "error");
+    openModal(DOM.modalLoginAdmin);
+    return;
+  }
+
+  if (!Array.isArray(State.orders) || State.orders.length === 0) {
+    showToast("Danh Sách Hàng Hoá Nhập Đổi Lỗi hiện tại đang trống, không có đơn nào để xóa!", "info");
+    return;
+  }
+
+  const count = State.orders.length;
+  const promptVal = prompt(
+    `⚠️ CẢNH BÁO QUẢN TRỊ VIÊN:\n\nBạn đang thực hiện XÓA TOÀN BỘ ${count} đơn hàng trong "Danh Sách Hàng Hoá Nhập Đổi Lỗi" của kho này!\n\nSau khi xóa, dữ liệu sẽ bị xóa vĩnh viễn trên Cloud Firebase và không thể khôi phục.\n\nNhập "XOA" hoặc mật khẩu Admin (43751) để xác nhận xóa:`
+  );
+
+  if (!promptVal) return;
+
+  const clean = promptVal.trim();
+  if (clean.toUpperCase() !== "XOA" && clean !== ADMIN_PASSWORD) {
+    showToast("Mã xác nhận không đúng! Đã hủy thao tác xóa danh sách.", "warning");
+    return;
+  }
+
+  showToast(`Đang xóa ${count} đơn trong danh sách...`, "info");
+  if (typeof deleteAllOrdersFromFirebase === "function") {
+    await deleteAllOrdersFromFirebase();
+  } else {
+    localStorage.setItem(LOCAL_KEYS.ORDERS, JSON.stringify([]));
+  }
+
+  State.orders = [];
+  updateKPIs();
+  renderOrdersTable();
+  playSuccessSound();
+  showToast(`✅ Đã xóa sạch toàn bộ ${count} đơn trong "Danh Sách Hàng Hoá Nhập Đổi Lỗi"!`, "success");
+}
+
 // ==============================================================================
 // 6. QUẢN LÝ DANH MỤC SẢN PHẨM BẰNG EXCEL (SHEETJS)
 // ==============================================================================
@@ -1905,6 +1946,9 @@ function setupEventListeners() {
 
   // Export orders to Excel
   DOM.btnExportOrdersExcel.addEventListener("click", exportOrdersToExcel);
+  if (DOM.btnClearAllOrders) {
+    DOM.btnClearAllOrders.addEventListener("click", handleClearAllOrders);
+  }
 
   // Switch giữa Nhân viên và Admin
   if (DOM.btnSwitchToAdminLogin) {
