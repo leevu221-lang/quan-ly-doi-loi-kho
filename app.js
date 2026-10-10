@@ -832,9 +832,6 @@ async function handleNewOrderSubmit(e) {
   updateKPIs();
   renderOrdersTable();
   showToast(`✅ Đã lưu phiếu tiếp nhận ${orderCode} thành công!`, "success");
-
-  // Tự động mở xem trước phiếu in tiếp nhận
-  openReceiptModal(newOrder);
 }
 
 // Tra cứu tên khách hàng cũ khi gõ SĐT
