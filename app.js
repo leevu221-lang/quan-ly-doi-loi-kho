@@ -980,36 +980,61 @@ function handleExcelFileSelect(file) {
         return;
       }
 
-      // Nhận diện header cột
-      const headerRow = jsonRows[0].map(h => String(h || '').trim().toLowerCase());
-      let colCode = headerRow.findIndex(h => h.includes('mã') || h.includes('code') || h.includes('sku') || h.includes('id'));
-      let colName = headerRow.findIndex(h => h.includes('tên') || h.includes('name') || h.includes('sản phẩm') || h.includes('san pham'));
-      let colCat = headerRow.findIndex(h => h.includes('ngành') || h.includes('nhóm') || h.includes('loại') || h.includes('category'));
+      // Cấu hình cố định cột theo chuẩn file siêu thị:
+      // CỘT H (index 7): MÃ SẢN PHẨM
+      // CỘT I (index 8): TÊN SẢN PHẨM
+      // CỘT D (index 3): NGÀNH HÀNG
+      let colCode = 7; // Cột H
+      let colName = 8; // Cột I
+      let colCat = 3;  // Cột D
 
-      // Mặc định nếu không tìm thấy tên cột
-      if (colCode === -1 && jsonRows[0].length >= 1) colCode = 0;
-      if (colName === -1 && jsonRows[0].length >= 2) colName = 1;
-      if (colCat === -1 && jsonRows[0].length >= 3) colCat = 2;
+      // Kiểm tra số lượng cột trong file: nếu file ít hơn 9 cột (file mẫu ngắn), tự động tìm theo tên cột
+      const maxCols = Math.max(...jsonRows.slice(0, 10).map(r => Array.isArray(r) ? r.length : 0));
+      if (maxCols < 9) {
+        const headerRow = jsonRows[0].map(h => String(h || '').trim().toLowerCase());
+        const foundCode = headerRow.findIndex(h => h.includes('mã sp') || h.includes('mã sản phẩm') || h.includes('sku') || h.includes('mã'));
+        const foundName = headerRow.findIndex(h => h.includes('tên sp') || h.includes('tên sản phẩm') || h.includes('sản phẩm') || h.includes('tên'));
+        const foundCat = headerRow.findIndex(h => h.includes('ngành') || h.includes('nhóm') || h.includes('loại') || h.includes('category'));
+        if (foundCode !== -1) colCode = foundCode; else colCode = 0;
+        if (foundName !== -1) colName = foundName; else colName = 1;
+        if (foundCat !== -1) colCat = foundCat; else colCat = 2;
+      }
 
       const parsed = [];
+      const seenCodes = new Set();
+
+      // Bắt đầu đọc dữ liệu từ dòng 2 (index 1), bỏ qua dòng tiêu đề
       for (let i = 1; i < jsonRows.length; i++) {
         const row = jsonRows[i];
         if (!row || !row.length) continue;
 
-        let code = colCode !== -1 ? String(row[colCode] || '').trim() : '';
-        let name = colName !== -1 ? String(row[colName] || '').trim() : '';
-        let cat = colCat !== -1 ? String(row[colCat] || '').trim() : 'Tổng hợp';
+        let code = colCode < row.length ? String(row[colCode] != null ? row[colCode] : '').trim() : '';
+        let name = colName < row.length ? String(row[colName] != null ? row[colName] : '').trim() : '';
+        let cat = colCat < row.length ? String(row[colCat] != null ? row[colCat] : '').trim() : 'Tổng hợp';
+
+        // Bỏ phần thập phân nếu mã bị Excel chuyển thành số dạng .0
+        code = code.replace(/\.0$/, '');
+
+        // Bỏ qua dòng trống hoặc dòng tiêu đề lặp lại
+        if (!code && !name) continue;
+        const lowerCode = code.toLowerCase();
+        const lowerName = name.toLowerCase();
+        if (lowerCode.includes('mã sản phẩm') || lowerCode === 'mã sp' || lowerName.includes('tên sản phẩm') || lowerName === 'tên sp') {
+          continue;
+        }
 
         if (!name && code) name = code;
-        if (!code && name) code = `SP${i}`;
+        if (!code && name) code = `SP-${i}`;
 
-        if (name) {
-          parsed.push({
-            code: code || `SP-${Date.now()}-${i}`,
-            name: name,
-            category: cat || 'Điện máy'
-          });
-        }
+        // Tránh trùng lặp mã sản phẩm trong cùng file Excel
+        if (seenCodes.has(code)) continue;
+        seenCodes.add(code);
+
+        parsed.push({
+          code: code,
+          name: name,
+          category: cat || 'Tổng hợp'
+        });
       }
 
       if (!parsed.length) {
