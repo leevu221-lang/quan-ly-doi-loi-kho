@@ -276,7 +276,7 @@
               <th style="width: 140px;">Mã phiếu / Giờ</th>
               <th style="width: 180px;">Khách hàng</th>
               <th>Sản phẩm đổi lỗi</th>
-              <th style="width: 170px;">Tình trạng lỗi</th>
+              <th style="width: 180px;">Ghi chú</th>
               <th style="width: 170px;">Nhân viên tiếp nhận</th>
               <th style="width: 150px; text-align: center;">Trạng thái kho</th>
               <th style="width: 130px; text-align: right;">Thao tác</th>
@@ -507,94 +507,15 @@
             </div>
           </div>
 
-          <div class="form-row-2">
-            <!-- Serial / IMEI -->
-            <div class="form-group">
-              <label class="form-label" for="inputSerial">Số Serial / IMEI máy (nếu có):</label>
-              <input 
-                type="text" 
-                id="inputSerial" 
-                class="form-control font-mono" 
-                placeholder="VD: SN123456789 hoặc 8690..."
-              />
-            </div>
-
-            <!-- Hình thức xử lý -->
-            <div class="form-group">
-              <label class="form-label" for="selectResolution">Hình thức đổi trả:</label>
-              <select id="selectResolution" class="form-select">
-                <option value="Đổi mới sản phẩm khác">Đổi mới sản phẩm khác</option>
-                <option value="Đổi cùng model 100%">Đổi cùng model (mới 100%)</option>
-                <option value="Giữ lại gửi hãng bảo hành">Giữ lại gửi hãng bảo hành</option>
-                <option value="Hoàn tiền / Thu hồi">Hoàn tiền / Thu hồi</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Tình trạng lỗi -->
+          <!-- Ghi chú (không bắt buộc) -->
           <div class="form-group">
-            <label class="form-label" for="inputDefectReason">
-              Mô tả chi tiết tình trạng lỗi của sản phẩm <span class="required">*</span>
-            </label>
-            <!-- Quick Chips for common issues -->
-            <div class="quick-defect-chips" id="quickDefectChips">
-              <button type="button" class="chip-sm" data-text="Không lên nguồn / Mất nguồn">Không lên nguồn</button>
-              <button type="button" class="chip-sm" data-text="Lỗi hình ảnh / Màn hình kẻ sọc">Lỗi màn hình</button>
-              <button type="button" class="chip-sm" data-text="Mất kết nối WiFi / Không xem được">Mất kết nối</button>
-              <button type="button" class="chip-sm" data-text="Rò rỉ nước / Máy kêu to">Rò rỉ nước / Kêu to</button>
-              <button type="button" class="chip-sm" data-text="Không nóng / Không lạnh">Không nóng / lạnh</button>
-              <button type="button" class="chip-sm" data-text="Lỗi phần mềm / Treo logo">Lỗi phần mềm</button>
-              <button type="button" class="chip-sm" data-text="Hỏng phụ kiện kèm theo">Hỏng phụ kiện</button>
-            </div>
+            <label class="form-label" for="inputNotes">Ghi chú (không bắt buộc):</label>
             <textarea 
-              id="inputDefectReason" 
-              class="form-control" 
-              rows="3" 
-              placeholder="Mô tả cụ thể triệu chứng lỗi khách báo và tình trạng ngoại quan thân máy..." 
-              required
-            ></textarea>
-          </div>
-
-          <!-- Phụ kiện kèm theo -->
-          <div class="form-group">
-            <label class="form-label">Phụ kiện & Hộp kèm theo:</label>
-            <div class="checkbox-group-grid">
-              <label class="checkbox-item">
-                <input type="checkbox" name="accessory" value="Thân máy" checked />
-                <span>Thân máy</span>
-              </label>
-              <label class="checkbox-item">
-                <input type="checkbox" name="accessory" value="Vỏ hộp / Thùng" checked />
-                <span>Vỏ hộp / Thùng</span>
-              </label>
-              <label class="checkbox-item">
-                <input type="checkbox" name="accessory" value="Củ sạc / Nguồn" />
-                <span>Củ sạc / Nguồn</span>
-              </label>
-              <label class="checkbox-item">
-                <input type="checkbox" name="accessory" value="Dây cáp kết nối" />
-                <span>Dây cáp</span>
-              </label>
-              <label class="checkbox-item">
-                <input type="checkbox" name="accessory" value="Điều khiển (Remote)" />
-                <span>Điều khiển</span>
-              </label>
-              <label class="checkbox-item">
-                <input type="checkbox" name="accessory" value="Sách HDSD / Phiếu BH" />
-                <span>Phiếu BH / Sách</span>
-              </label>
-            </div>
-          </div>
-
-          <!-- Ghi chú thêm -->
-          <div class="form-group">
-            <label class="form-label" for="inputNotes">Ghi chú lưu ý thêm (nếu có):</label>
-            <input 
-              type="text" 
               id="inputNotes" 
               class="form-control" 
-              placeholder="VD: Hàng có vết trầy nhẹ mặt sau, khách cần lấy gấp..."
-            />
+              rows="3" 
+              placeholder="Nhập ghi chú nếu có (không bắt buộc)..."
+            ></textarea>
           </div>
 
           <div class="modal-footer">
@@ -806,28 +727,17 @@
           </div>
 
           <!-- Section 2: Product & Defect Details -->
+          <!-- Section 2: Product & Notes Details -->
           <div class="receipt-section">
-            <h4 class="receipt-sec-title">2. THÔNG TIN SẢN PHẨM & TÌNH TRẠNG LỖI</h4>
+            <h4 class="receipt-sec-title">2. THÔNG TIN SẢN PHẨM & GHI CHÚ</h4>
             <table class="receipt-table">
               <tr>
-                <td style="width: 25%;">Tên sản phẩm:</td>
-                <td><strong id="printProductName">--</strong> (<span id="printProductCode">Mã SP: --</span>)</td>
+                <td style="width: 28%;">Tên sản phẩm đổi lỗi:</td>
+                <td><strong id="printProductName">--</strong></td>
               </tr>
               <tr>
-                <td>Số Serial / IMEI:</td>
-                <td><span id="printSerial">--</span></td>
-              </tr>
-              <tr>
-                <td>Triệu chứng lỗi:</td>
-                <td><strong id="printDefectReason">--</strong></td>
-              </tr>
-              <tr>
-                <td>Phụ kiện gửi kèm:</td>
-                <td><span id="printAccessories">--</span></td>
-              </tr>
-              <tr>
-                <td>Hình thức giải quyết:</td>
-                <td><strong id="printResolution">--</strong></td>
+                <td>Ghi chú:</td>
+                <td><span id="printNotes">--</span></td>
               </tr>
               <tr>
                 <td>Trạng thái kho:</td>

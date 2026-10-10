@@ -174,10 +174,6 @@ function cacheDOMElements() {
   DOM.selProdCode = document.getElementById("selProdCode");
   DOM.selProdName = document.getElementById("selProdName");
   DOM.btnClearSelectedProd = document.getElementById("btnClearSelectedProd");
-  DOM.inputSerial = document.getElementById("inputSerial");
-  DOM.selectResolution = document.getElementById("selectResolution");
-  DOM.inputDefectReason = document.getElementById("inputDefectReason");
-  DOM.quickDefectChips = document.getElementById("quickDefectChips");
   DOM.inputNotes = document.getElementById("inputNotes");
 
   // Modal Excel
@@ -550,21 +546,12 @@ async function handleNewOrderSubmit(e) {
   const productCode = State.selectedProduct 
     ? State.selectedProduct.code 
     : "KHAC";
-  const serial = DOM.inputSerial.value.trim();
-  const resolution = DOM.selectResolution.value;
-  const defectReason = DOM.inputDefectReason.value.trim();
-  const notes = DOM.inputNotes.value.trim();
+  const notes = DOM.inputNotes ? DOM.inputNotes.value.trim() : "";
 
-  if (!phone || !customerName || !productName || !defectReason) {
-    showToast("Vui lòng điền đầy đủ các thông tin bắt buộc!", "error");
+  if (!phone || !customerName || !productName) {
+    showToast("Vui lòng điền đầy đủ: SĐT, Họ tên và Tên sản phẩm đổi lỗi!", "error");
     return;
   }
-
-  // Thu thập phụ kiện
-  const accessories = [];
-  DOM.newOrderForm.querySelectorAll('input[name="accessory"]:checked').forEach(cb => {
-    accessories.push(cb.value);
-  });
 
   const orderCode = DOM.fieldOrderCode.textContent;
   const now = new Date();
@@ -580,10 +567,6 @@ async function handleNewOrderSubmit(e) {
     customerName: customerName,
     productCode: productCode,
     productName: productName,
-    serial: serial,
-    resolution: resolution,
-    defectReason: defectReason,
-    accessories: accessories,
     notes: notes,
     staffCode: staffCode,
     staffName: staffName,
@@ -901,11 +884,8 @@ function openReceiptModal(order) {
   document.getElementById("printCustomerName").textContent = order.customerName;
   document.getElementById("printCustomerPhone").textContent = order.customerPhone;
   document.getElementById("printProductName").textContent = order.productName;
-  document.getElementById("printProductCode").textContent = `Mã SP: ${order.productCode}`;
-  document.getElementById("printSerial").textContent = order.serial || "(Không có)";
-  document.getElementById("printDefectReason").textContent = order.defectReason;
-  document.getElementById("printAccessories").textContent = (order.accessories && order.accessories.length) ? order.accessories.join(", ") : "Chỉ thân máy";
-  document.getElementById("printResolution").textContent = order.resolution || "Đổi mới sản phẩm";
+  const elPrintNotes = document.getElementById("printNotes");
+  if (elPrintNotes) elPrintNotes.textContent = order.notes || "(Không có ghi chú)";
 
   const whStatusTxt = order.warehouseStatus === "DA_VE_KHO" 
     ? `✅ ĐÃ VỀ KHO (${order.warehouseDisplayTime || formatDateTime(order.warehouseTime)})` 
@@ -950,11 +930,8 @@ function exportOrdersToExcel() {
       "SỐ ĐIỆN THOẠI KHÁCH",
       "HỌ TÊN KHÁCH HÀNG",
       "MÃ SẢN PHẨM",
-      "TÊN SẢN PHẨM",
-      "SỐ SERIAL/IMEI",
-      "TRIỆU CHỨNG LỖI",
-      "PHỤ KIỆN KÈM THEO",
-      "HÌNH THỨC XỬ LÝ",
+      "TÊN SẢN PHẨM ĐỔI LỖI",
+      "GHI CHÚ",
       "NHÂN VIÊN TIẾP NHẬN",
       "MÃ NHÂN VIÊN",
       "TRẠNG THÁI VỀ KHO",
@@ -973,10 +950,7 @@ function exportOrdersToExcel() {
       o.customerName,
       o.productCode,
       o.productName,
-      o.serial || "",
-      o.defectReason,
-      (o.accessories || []).join(", "),
-      o.resolution,
+      o.notes || "",
       o.staffName,
       o.staffCode,
       o.warehouseStatus === "DA_VE_KHO" ? "ĐÃ VỀ KHO" : "CHƯA VỀ KHO",
@@ -1094,19 +1068,14 @@ function renderOrdersTable() {
         <td>
           <div class="product-cell-box">
             <span class="product-name-txt">${escapeHtml(o.productName)}</span>
-            <span class="product-meta-sub">
-              ${o.productCode !== 'KHAC' ? `Mã: <code class="font-mono">${escapeHtml(o.productCode)}</code> • ` : ''}
-              ${o.serial ? `Serial: <span class="font-mono">${escapeHtml(o.serial)}</span> • ` : ''}
-              <span class="text-primary">${escapeHtml(o.resolution || 'Đổi mới')}</span>
-            </span>
+            ${o.productCode && o.productCode !== 'KHAC' ? `<span class="product-meta-sub">Mã SP: <code class="font-mono">${escapeHtml(o.productCode)}</code></span>` : ''}
           </div>
         </td>
 
-        <!-- Tình trạng lỗi -->
+        <!-- Ghi chú -->
         <td>
           <div class="defect-summary-box">
-            <span class="defect-reason-badge">${escapeHtml(o.defectReason)}</span>
-            ${o.notes ? `<div class="defect-desc-txt">${escapeHtml(o.notes)}</div>` : ''}
+            ${o.notes ? `<div class="defect-desc-txt" style="color: var(--text-main); font-weight: 500;">${escapeHtml(o.notes)}</div>` : '<span style="color: var(--text-muted); font-size: 12px; font-style: italic;">(Không có)</span>'}
           </div>
         </td>
 
@@ -1332,20 +1301,6 @@ function setupEventListeners() {
     handleProductSearchAutocomplete(e.target.value);
   });
   DOM.btnClearSelectedProd.addEventListener("click", clearSelectedProduct);
-
-  // Quick defect chips
-  DOM.quickDefectChips.querySelectorAll(".chip-sm").forEach(chip => {
-    chip.addEventListener("click", () => {
-      const text = chip.getAttribute("data-text");
-      const cur = DOM.inputDefectReason.value.trim();
-      if (!cur) {
-        DOM.inputDefectReason.value = text;
-      } else if (!cur.includes(text)) {
-        DOM.inputDefectReason.value = cur + "; " + text;
-      }
-      DOM.inputDefectReason.focus();
-    });
-  });
 
   // Modal Excel triggers
   DOM.btnOpenExcelModal.addEventListener("click", openExcelProductsModal);
