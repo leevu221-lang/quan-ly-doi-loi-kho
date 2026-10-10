@@ -54,6 +54,7 @@ const State = {
     code: "",
     name: ""
   },
+  currentStaff: null,
   staffList: [...INITIAL_STAFF],
   products: [],
   orders: [],
@@ -284,6 +285,22 @@ function initStoredData() {
       State.orders = [];
     }
   }
+
+  // Load nhân viên đăng nhập hiện tại
+  const savedStaff = localStorage.getItem("dmx_current_staff");
+  if (savedStaff) {
+    try {
+      State.currentStaff = JSON.parse(savedStaff);
+    } catch(e) {}
+  }
+  if (!State.currentStaff || !State.currentStaff.code) {
+    const lastCode = localStorage.getItem("dmx_last_staff_code");
+    const found = State.staffList.find(s => s.code === lastCode);
+    if (found) State.currentStaff = found;
+  }
+
+  // Tự động kiểm tra và chuyển các đơn bị gán nhầm là Admin về nhân viên hiện tại
+  fixAdminStaffInOrders();
 }
 
 // Bắt buộc hiển thị màn hình chọn nhân viên mỗi khi mở web
@@ -337,12 +354,60 @@ function updateUserBadgeUI() {
   }
 }
 
+// Lấy thông tin nhân viên đăng nhập thực tế (không lấy tài khoản Admin)
+function getActiveStaff() {
+  if (State.currentUser && State.currentUser.role === "staff" && State.currentUser.code && State.currentUser.code !== "ADMIN") {
+    return {
+      code: State.currentUser.code,
+      name: State.currentUser.name
+    };
+  }
+  if (State.currentStaff && State.currentStaff.code && State.currentStaff.code !== "ADMIN") {
+    return State.currentStaff;
+  }
+  const savedStaff = localStorage.getItem("dmx_current_staff");
+  if (savedStaff) {
+    try {
+      const parsed = JSON.parse(savedStaff);
+      if (parsed && parsed.code && parsed.code !== "ADMIN") return parsed;
+    } catch(e) {}
+  }
+  const lastCode = localStorage.getItem("dmx_last_staff_code");
+  const found = State.staffList.find(s => s.code === lastCode && s.code !== "ADMIN");
+  if (found) return found;
+
+  return State.staffList[0] || { code: "38834", name: "NGÔ THỊ BÉ THẮM" };
+}
+
+// Tự động sửa lại những đơn cũ bị gán nhầm là Admin về nhân viên tiếp nhận thực tế
+function fixAdminStaffInOrders() {
+  const activeStaff = getActiveStaff();
+  let changed = false;
+  State.orders.forEach(o => {
+    if (o.staffCode === "ADMIN" || !o.staffName || o.staffName.includes("Admin") || o.staffName.includes("Quản Trị")) {
+      o.staffCode = activeStaff.code;
+      o.staffName = activeStaff.name;
+      changed = true;
+      saveOrderToFirebase(o);
+    }
+  });
+  if (changed) {
+    renderOrdersTable();
+    updateKPIs();
+  }
+}
+
 function loginAsStaff(staff) {
   State.currentUser = {
     role: "staff",
     code: staff.code,
     name: staff.name
   };
+  State.currentStaff = {
+    code: staff.code,
+    name: staff.name
+  };
+  localStorage.setItem("dmx_current_staff", JSON.stringify(State.currentStaff));
   localStorage.setItem("dmx_last_staff_code", staff.code);
   updateUserBadgeUI();
   if (DOM.modalLoginStaff) {
@@ -352,6 +417,9 @@ function loginAsStaff(staff) {
   DOM.userDropdownMenu.style.display = "none";
   playSuccessSound();
   showToast(`👋 Chào bạn, ${staff.name} (${staff.code})! Đăng nhập thành công.`, "success");
+
+  // Đồng bộ lại đơn hàng nếu có đơn bị lưu nhầm Admin
+  fixAdminStaffInOrders();
 }
 
 function loginAsAdmin() {
@@ -686,11 +754,9 @@ function openNewOrderModal() {
   DOM.fieldOrderCode.textContent = code;
   DOM.fieldOrderTime.textContent = formatDateTime(now);
   
-  if (State.currentUser.role === "admin") {
-    DOM.fieldOrderStaff.textContent = "Admin - Quản trị viên";
-  } else {
-    DOM.fieldOrderStaff.textContent = `${State.currentUser.code} - ${State.currentUser.name}`;
-  }
+  // Nhân viên tiếp nhận luôn là nhân viên đăng nhập hiện tại
+  const activeStaff = getActiveStaff();
+  DOM.fieldOrderStaff.textContent = `${activeStaff.code} - ${activeStaff.name}`;
 
   // Reset form
   DOM.newOrderForm.reset();
@@ -791,8 +857,10 @@ async function handleNewOrderSubmit(e) {
   const orderCode = DOM.fieldOrderCode.textContent;
   const now = new Date();
 
-  const staffCode = State.currentUser.code || "38834";
-  const staffName = State.currentUser.name || "Nhân viên";
+  // Nhân viên tiếp nhận luôn là nhân viên đăng nhập hiện tại
+  const activeStaff = getActiveStaff();
+  const staffCode = activeStaff.code;
+  const staffName = activeStaff.name;
 
   const newOrder = {
     orderCode: orderCode,
@@ -859,6 +927,14 @@ function openWarehouseConfirmModal(orderCode) {
 
   State.activeOrderToConfirm = order;
 
+  // Nếu đơn hàng bị ghi nhận nhầm là Admin, tự động chuyển về nhân viên đăng nhập hiện tại
+  if (order.staffCode === "ADMIN" || !order.staffName || order.staffName.includes("Admin") || order.staffName.includes("Quản Trị")) {
+    const activeStaff = getActiveStaff();
+    order.staffCode = activeStaff.code;
+    order.staffName = activeStaff.name;
+    saveOrderToFirebase(order);
+  }
+
   DOM.confirmOrderSummary.innerHTML = `
     <div class="confirm-summary-row">
       <span class="label">Mã phiếu đổi lỗi:</span>
@@ -874,7 +950,7 @@ function openWarehouseConfirmModal(orderCode) {
     </div>
     <div class="confirm-summary-row">
       <span class="label">Nhân viên tiếp nhận:</span>
-      <span class="val">${escapeHtml(order.staffName)}</span>
+      <span class="val font-semibold text-success">👤 ${escapeHtml(order.staffName)} ${order.staffCode ? `(${escapeHtml(order.staffCode)})` : ''}</span>
     </div>
     <div class="confirm-summary-row">
       <span class="label">Hiện tại:</span>
@@ -1741,6 +1817,7 @@ function handleFirebaseStatusChange(isOnline, message) {
 function handleFirebaseOrdersUpdated(ordersList) {
   State.orders = ordersList;
   localStorage.setItem('dmx_doi_loi_orders', JSON.stringify(ordersList));
+  fixAdminStaffInOrders();
   updateKPIs();
   renderOrdersTable();
 }
