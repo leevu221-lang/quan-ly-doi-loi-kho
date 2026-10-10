@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Quản Lý Hàng Hoá Nhập Đổi Lỗi & Xác Nhận Kho - Thợ ĐMX</title>
+  <meta name="description" content="Hệ thống quản lý tiếp nhận hàng hoá đổi lỗi cho khách hàng, đối soát và xác nhận hàng lỗi về kho siêu thị Điện Máy Xanh, tích hợp Firebase & Excel.">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230284c7'><path d='M20 7h-4V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v3H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm-6-3v3h-4V4h4zm6 16H4V9h16v11z'/></svg>">
+  <meta name="theme-color" content="#0284c7">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  
+  <!-- SheetJS (Đọc/Ghi file Excel trực tiếp trên trình duyệt) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <!-- JsBarcode (Tạo mã vạch trên phiếu in đổi trả) -->
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+
+  <!-- Firebase SDK (v10 Compat cho Cloud Firestore & Realtime Sync) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-light">
+
+  <!-- Background Ambient Glow -->
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+
+  <!-- Header / Navbar -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand-group">
+        <div class="brand-logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="brand-icon">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+          </svg>
+        </div>
+        <div class="brand-info">
+          <div class="badge-mini">DỊCH VỤ KHÁCH HÀNG & KHO SIÊU THỊ</div>
+          <h1 class="brand-title">Quản Lý Nhập Đổi Lỗi & Kho</h1>
+        </div>
+      </div>
+
+      <!-- Header Actions -->
+      <div class="header-actions">
+        <!-- Firebase Status -->
+        <div class="firebase-status" id="firebaseStatusBadge" title="Trạng thái kết nối cơ sở dữ liệu Firebase Cloud Firestore">
+          <span class="status-dot"></span>
+          <span class="status-label" id="firebaseStatusText">Firebase: Đang kết nối...</span>
+        </div>
+
+        <!-- Theme Toggle -->
+        <button class="btn-icon" id="btnThemeToggle" title="Chuyển chế độ sáng / tối">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+
+        <!-- Current User Profile / Role Toggle -->
+        <div class="user-auth-wrap" id="userAuthWrap">
+          <button type="button" class="btn-user-badge role-guest" id="btnUserBadge">
+            <span class="user-badge-icon" id="userBadgeIcon">👤</span>
+            <div class="user-badge-info">
+              <span class="user-badge-role" id="userBadgeRole">Chưa đăng nhập</span>
+              <span class="user-badge-name" id="userBadgeName">Bấm để chọn nhân viên</span>
+            </div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="arrow-down">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+
+          <!-- Dropdown switch account -->
+          <div class="user-dropdown-menu" id="userDropdownMenu" style="display: none;">
+            <div class="dropdown-header">Chọn hình thức đăng nhập:</div>
+            <button class="dropdown-item" id="btnMenuLoginStaff">
+              <span class="item-icon">👤</span>
+              <div>
+                <strong>Nhân viên siêu thị</strong>
+                <p>Gõ tên hoặc user - Không cần mật khẩu</p>
+              </div>
+            </button>
+            <button class="dropdown-item" id="btnMenuLoginAdmin">
+              <span class="item-icon">🛡️</span>
+              <div>
+                <strong>Quản trị viên (Admin)</strong>
+                <p>Mật khẩu: 43751 - Toàn quyền kho & Excel</p>
+              </div>
+            </button>
+            <div class="dropdown-divider" id="dropdownDividerLogout" style="display: none;"></div>
+            <button class="dropdown-item text-danger" id="btnMenuLogout" style="display: none;">
+              <span class="item-icon">🚪</span>
+              <div>
+                <strong>Đăng xuất tài khoản</strong>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="app-main">
+    
+    <!-- KPI Stats Overview Cards -->
+    <section class="kpi-grid">
+      <div class="kpi-card" data-filter="all" id="kpiCardAll">
+        <div class="kpi-icon-wrap icon-blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+          </svg>
+        </div>
+        <div class="kpi-content">
+          <span class="kpi-title">Tổng đơn đổi lỗi</span>
+          <div class="kpi-number" id="statTotalOrders">0</div>
+          <span class="kpi-desc">Tất cả phiếu tiếp nhận</span>
+        </div>
+      </div>
+
+      <div class="kpi-card kpi-warning" data-filter="pending" id="kpiCardPending">
+        <div class="kpi-icon-wrap icon-amber">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+        </div>
+        <div class="kpi-content">
+          <span class="kpi-title">CHƯA VỀ KHO (Tại quầy)</span>
+          <div class="kpi-number text-amber" id="statPendingOrders">0</div>
+          <span class="kpi-desc">Cần thủ kho nhận & xác nhận</span>
+        </div>
+        <span class="kpi-badge-pulse">Cần xử lý</span>
+      </div>
+
+      <div class="kpi-card" data-filter="received" id="kpiCardReceived">
+        <div class="kpi-icon-wrap icon-emerald">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+        </div>
+        <div class="kpi-content">
+          <span class="kpi-title">ĐÃ VỀ KHO SIÊU THỊ</span>
+          <div class="kpi-number text-emerald" id="statReceivedOrders">0</div>
+          <span class="kpi-desc">Đã lưu trữ an toàn trong kho</span>
+        </div>
+      </div>
+
+      <div class="kpi-card" data-filter="products" id="kpiCardProducts">
+        <div class="kpi-icon-wrap icon-indigo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+          </svg>
+        </div>
+        <div class="kpi-content">
+          <span class="kpi-title">Danh mục sản phẩm</span>
+          <div class="kpi-number text-indigo" id="statTotalProducts">0</div>
+          <span class="kpi-desc" id="statProductDesc">Nạp từ Excel hoặc thêm mới</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Control Actions & Filter Bar -->
+    <section class="control-panel-card">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <h2 class="panel-heading">Danh Sách Hàng Hoá Nhập Đổi Lỗi</h2>
+          <p class="panel-subheading">Theo dõi đơn tiếp nhận, trạng thái hàng lỗi về kho và xuất báo cáo</p>
+        </div>
+
+        <div class="panel-actions">
+          <!-- Button Nhập đơn mới -->
+          <button type="button" class="btn btn-primary" id="btnOpenNewOrderModal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="icon">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span>➕ Nhập Đổi Lỗi Mới</span>
+          </button>
+
+          <!-- Button Import Excel Sản Phẩm (Dành riêng cho Admin) -->
+          <button type="button" class="btn btn-outline admin-only-btn" id="btnOpenExcelModal" title="Tải file Excel danh mục tên sản phẩm để nhân viên chọn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon text-success">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="8" y1="13" x2="16" y2="13"></line>
+              <line x1="8" y1="17" x2="16" y2="17"></line>
+            </svg>
+            <span>📥 Quản lý Sản Phẩm (Excel)</span>
+          </button>
+
+          <!-- Button Xuất Excel Danh Sách Đơn -->
+          <button type="button" class="btn btn-outline" id="btnExportOrdersExcel" title="Xuất toàn bộ đơn đổi lỗi ra file Excel">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>Xuất Excel Đơn</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Filters & Search Toolbar -->
+      <div class="filter-toolbar">
+        <!-- Search Input -->
+        <div class="search-input-wrap">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input 
+            type="text" 
+            id="searchInput" 
+            class="filter-search-input" 
+            placeholder="Tìm theo SĐT, Họ tên khách, Mã phiếu, Tên sản phẩm, Serial..." 
+            autocomplete="off"
+          />
+          <button class="btn-clear-search" id="btnClearSearch" style="display: none;">✕</button>
+        </div>
+
+        <!-- Filter Status Pills -->
+        <div class="filter-pills" id="filterStatusPills">
+          <button type="button" class="pill active" data-status="ALL">Tất cả (<span id="countAll">0</span>)</button>
+          <button type="button" class="pill pill-pending" data-status="CHUA_VE_KHO">⚠️ Chưa về kho (<span id="countPending">0</span>)</button>
+          <button type="button" class="pill pill-received" data-status="DA_VE_KHO">✅ Đã về kho (<span id="countReceived">0</span>)</button>
+        </div>
+
+        <!-- Filter Staff Dropdown -->
+        <div class="filter-select-wrap">
+          <label for="filterStaffSelect">Nhân viên:</label>
+          <select id="filterStaffSelect" class="form-select select-sm">
+            <option value="ALL">-- Tất cả nhân viên --</option>
+          </select>
+        </div>
+
+        <!-- Filter Date -->
+        <div class="filter-select-wrap">
+          <label for="filterDateInput">Ngày:</label>
+          <input type="date" id="filterDateInput" class="form-select select-sm" />
+          <button type="button" class="btn-text-sm" id="btnResetDateFilter" title="Xóa lọc ngày">Hôm nay</button>
+        </div>
+      </div>
+
+      <!-- Orders Data Table -->
+      <div class="table-responsive">
+        <table class="data-table" id="ordersTable">
+          <thead>
+            <tr>
+              <th style="width: 50px;">STT</th>
+              <th style="width: 140px;">Mã phiếu / Giờ</th>
+              <th style="width: 180px;">Khách hàng</th>
+              <th>Sản phẩm đổi lỗi</th>
+              <th style="width: 170px;">Tình trạng lỗi</th>
+              <th style="width: 170px;">Nhân viên tiếp nhận</th>
+              <th style="width: 150px; text-align: center;">Trạng thái kho</th>
+              <th style="width: 130px; text-align: right;">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="ordersTableBody">
+            <!-- Dynamic rows will be inserted here -->
+          </tbody>
+        </table>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="emptyState" style="display: none;">
+          <div class="empty-icon">📦</div>
+          <h3 class="empty-title">Chưa có đơn đổi lỗi nào phù hợp</h3>
+          <p class="empty-desc">Nhấn vào nút "➕ Nhập Đổi Lỗi Mới" để bắt đầu tiếp nhận hàng hoá đổi trả từ khách hàng.</p>
+          <button type="button" class="btn btn-primary" id="btnEmptyCreate">➕ Tạo đơn mới ngay</button>
+        </div>
+
+        <!-- Loading State -->
+        <div class="table-loading" id="tableLoading">
+          <div class="spinner"></div>
+          <span>Đang nạp dữ liệu đơn đổi lỗi từ Firebase...</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ======================================================== -->
+  <!-- MODAL 1: ĐĂNG NHẬP NHÂN VIÊN (AUTOCOMPLETE - KHÔNG CẦN PASSWORD) -->
+  <!-- ======================================================== -->
+  <div class="modal-overlay" id="modalLoginStaff" style="display: none;">
+    <div class="modal-card modal-md">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon-badge">👤</div>
+          <div>
+            <h3 class="modal-heading">Đăng Nhập Nhân Viên</h3>
+            <p class="modal-subheading">Gõ mã hoặc tên nhân viên để đăng nhập ngay (không cần mật khẩu)</p>
+          </div>
+        </div>
+        <button class="btn-close-modal" id="btnCloseStaffLogin">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="staffSearchInput">Tìm mã nhân viên hoặc tên của bạn:</label>
+          <div class="input-search-box">
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input 
+              type="text" 
+              id="staffSearchInput" 
+              class="form-control" 
+              placeholder="Gõ mã (VD: 38834) hoặc tên (VD: Thắm, Mạnh, Nhạn...)" 
+              autocomplete="off"
+              autofocus
+            />
+          </div>
+          <!-- Autocomplete Suggestion List -->
+          <div class="staff-suggestions-dropdown" id="staffSuggestionsDropdown"></div>
+        </div>
+
+        <div class="staff-quick-pick">
+          <div class="quick-pick-title">Hoặc chọn nhanh từ danh sách 10 nhân viên siêu thị:</div>
+          <div class="staff-chips-grid" id="staffChipsList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL 2: ĐĂNG NHẬP QUẢN TRỊ VIÊN (ADMIN - PASSWORD: 43751) -->
+  <!-- ======================================================== -->
+  <div class="modal-overlay" id="modalLoginAdmin" style="display: none;">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon-badge icon-admin">🛡️</div>
+          <div>
+            <h3 class="modal-heading">Xác Thực Quản Trị Viên (Admin)</h3>
+            <p class="modal-subheading">Toàn quyền xác nhận kho, duyệt đơn và nạp sản phẩm Excel</p>
+          </div>
+        </div>
+        <button class="btn-close-modal" id="btnCloseAdminLogin">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <form id="adminLoginForm">
+          <div class="form-group">
+            <label class="form-label" for="adminPasswordInput">Nhập mật khẩu Admin:</label>
+            <input 
+              type="password" 
+              id="adminPasswordInput" 
+              class="form-control" 
+              placeholder="Nhập mật khẩu..." 
+              required
+              autocomplete="current-password"
+            />
+            <div class="form-hint">Mật khẩu mặc định hệ thống: <code>43751</code></div>
+          </div>
+          <div class="modal-footer" style="padding: 12px 0 0 0;">
+            <button type="button" class="btn btn-outline" id="btnCancelAdminLogin">Hủy</button>
+            <button type="submit" class="btn btn-primary" id="btnSubmitAdminLogin">Đăng nhập Admin</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL 3: NHẬP ĐƠN ĐỔI LỖI MỚI (TỰ ĐỘNG GIỜ + NV + TÌM SẢN PHẨM) -->
+  <!-- ======================================================== -->
+  <div class="modal-overlay" id="modalNewOrder" style="display: none;">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon-badge icon-order">📦</div>
+          <div>
+            <h3 class="modal-heading">Tạo Phiếu Nhập Đổi Lỗi Khách Hàng</h3>
+            <p class="modal-subheading">Thời gian nhập và thông tin nhân viên được hệ thống tự động ghi nhận</p>
+          </div>
+        </div>
+        <button class="btn-close-modal" id="btnCloseNewOrder">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <form id="newOrderForm">
+          <!-- Auto System Info Bar -->
+          <div class="auto-system-bar">
+            <div class="auto-item">
+              <span class="auto-label">MÃ PHIẾU TỰ ĐỘNG:</span>
+              <strong class="auto-val text-primary" id="fieldOrderCode">DL-XXXXXX-XXXX</strong>
+            </div>
+            <div class="auto-item">
+              <span class="auto-label">NGÀY GIỜ NHẬP (HỆ THỐNG):</span>
+              <strong class="auto-val" id="fieldOrderTime">--:--:-- --/--/----</strong>
+            </div>
+            <div class="auto-item">
+              <span class="auto-label">NHÂN VIÊN TIẾP NHẬN:</span>
+              <strong class="auto-val text-success" id="fieldOrderStaff">Chưa đăng nhập</strong>
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <!-- Số điện thoại khách hàng -->
+            <div class="form-group">
+              <label class="form-label" for="inputCustomerPhone">
+                Số điện thoại khách hàng <span class="required">*</span>
+              </label>
+              <div class="input-with-icon">
+                <span class="input-prefix">📞</span>
+                <input 
+                  type="tel" 
+                  id="inputCustomerPhone" 
+                  class="form-control" 
+                  placeholder="Nhập 10 số (VD: 0987654321)..." 
+                  required
+                  pattern="[0-9]{10,11}"
+                />
+              </div>
+              <div class="form-hint" id="phoneHint">Nhập SĐT để tự động tra cứu khách hàng cũ nếu có</div>
+            </div>
+
+            <!-- Họ tên khách hàng -->
+            <div class="form-group">
+              <label class="form-label" for="inputCustomerName">
+                Họ tên khách hàng <span class="required">*</span>
+              </label>
+              <div class="input-with-icon">
+                <span class="input-prefix">👤</span>
+                <input 
+                  type="text" 
+                  id="inputCustomerName" 
+                  class="form-control" 
+                  placeholder="Nhập họ và tên khách hàng..." 
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Tìm kiếm Sản phẩm Đổi Lỗi -->
+          <div class="form-group">
+            <label class="form-label" for="inputProductSearch">
+              Tên sản phẩm đổi lỗi <span class="required">*</span>
+            </label>
+            <div class="input-search-box">
+              <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input 
+                type="text" 
+                id="inputProductSearch" 
+                class="form-control" 
+                placeholder="Gõ mã hoặc tên sản phẩm (VD: Camera, Máy lọc nước, Karofi, Mutosi, Tivi...)" 
+                required
+                autocomplete="off"
+              />
+            </div>
+            <!-- Product Autocomplete Dropdown -->
+            <div class="product-dropdown" id="productDropdown" style="display: none;"></div>
+            <div class="selected-product-card" id="selectedProductCard" style="display: none;">
+              <div class="prod-badge-code" id="selProdCode">Mã: ----</div>
+              <div class="prod-name-highlight" id="selProdName">Tên sản phẩm</div>
+              <button type="button" class="btn-clear-prod" id="btnClearSelectedProd" title="Chọn sản phẩm khác">Đổi</button>
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <!-- Serial / IMEI -->
+            <div class="form-group">
+              <label class="form-label" for="inputSerial">Số Serial / IMEI máy (nếu có):</label>
+              <input 
+                type="text" 
+                id="inputSerial" 
+                class="form-control font-mono" 
+                placeholder="VD: SN123456789 hoặc 8690..."
+              />
+            </div>
+
+            <!-- Hình thức xử lý -->
+            <div class="form-group">
+              <label class="form-label" for="selectResolution">Hình thức đổi trả:</label>
+              <select id="selectResolution" class="form-select">
+                <option value="Đổi mới sản phẩm khác">Đổi mới sản phẩm khác</option>
+                <option value="Đổi cùng model 100%">Đổi cùng model (mới 100%)</option>
+                <option value="Giữ lại gửi hãng bảo hành">Giữ lại gửi hãng bảo hành</option>
+                <option value="Hoàn tiền / Thu hồi">Hoàn tiền / Thu hồi</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Tình trạng lỗi -->
+          <div class="form-group">
+            <label class="form-label" for="inputDefectReason">
+              Mô tả chi tiết tình trạng lỗi của sản phẩm <span class="required">*</span>
+            </label>
+            <!-- Quick Chips for common issues -->
+            <div class="quick-defect-chips" id="quickDefectChips">
+              <button type="button" class="chip-sm" data-text="Không lên nguồn / Mất nguồn">Không lên nguồn</button>
+              <button type="button" class="chip-sm" data-text="Lỗi hình ảnh / Màn hình kẻ sọc">Lỗi màn hình</button>
+              <button type="button" class="chip-sm" data-text="Mất kết nối WiFi / Không xem được">Mất kết nối</button>
+              <button type="button" class="chip-sm" data-text="Rò rỉ nước / Máy kêu to">Rò rỉ nước / Kêu to</button>
+              <button type="button" class="chip-sm" data-text="Không nóng / Không lạnh">Không nóng / lạnh</button>
+              <button type="button" class="chip-sm" data-text="Lỗi phần mềm / Treo logo">Lỗi phần mềm</button>
+              <button type="button" class="chip-sm" data-text="Hỏng phụ kiện kèm theo">Hỏng phụ kiện</button>
+            </div>
+            <textarea 
+              id="inputDefectReason" 
+              class="form-control" 
+              rows="3" 
+              placeholder="Mô tả cụ thể triệu chứng lỗi khách báo và tình trạng ngoại quan thân máy..." 
+              required
+            ></textarea>
+          </div>
+
+          <!-- Phụ kiện kèm theo -->
+          <div class="form-group">
+            <label class="form-label">Phụ kiện & Hộp kèm theo:</label>
+            <div class="checkbox-group-grid">
+              <label class="checkbox-item">
+                <input type="checkbox" name="accessory" value="Thân máy" checked />
+                <span>Thân máy</span>
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" name="accessory" value="Vỏ hộp / Thùng" checked />
+                <span>Vỏ hộp / Thùng</span>
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" name="accessory" value="Củ sạc / Nguồn" />
+                <span>Củ sạc / Nguồn</span>
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" name="accessory" value="Dây cáp kết nối" />
+                <span>Dây cáp</span>
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" name="accessory" value="Điều khiển (Remote)" />
+                <span>Điều khiển</span>
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" name="accessory" value="Sách HDSD / Phiếu BH" />
+                <span>Phiếu BH / Sách</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Ghi chú thêm -->
+          <div class="form-group">
+            <label class="form-label" for="inputNotes">Ghi chú lưu ý thêm (nếu có):</label>
+            <input 
+              type="text" 
+              id="inputNotes" 
+              class="form-control" 
+              placeholder="VD: Hàng có vết trầy nhẹ mặt sau, khách cần lấy gấp..."
+            />
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" id="btnCancelNewOrder">Đóng</button>
+            <button type="submit" class="btn btn-primary" id="btnSubmitNewOrder">
+              💾 Lưu Phiếu Tiếp Nhận Đổi Lỗi
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL 4: NHẬP SẢN PHẨM BẰNG EXCEL (DÀNH CHO ADMIN) -->
+  <!-- ======================================================== -->
+  <div class="modal-overlay" id="modalExcelProducts" style="display: none;">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon-badge icon-excel">📊</div>
+          <div>
+            <h3 class="modal-heading">Quản Lý & Nạp Danh Mục Sản Phẩm Từ Excel</h3>
+            <p class="modal-subheading">Kéo thả file Excel (.xlsx, .xls, .csv) để cập nhật danh mục cho nhân viên chọn</p>
+          </div>
+        </div>
+        <button class="btn-close-modal" id="btnCloseExcelModal">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Excel Upload Dropzone -->
+        <div class="excel-dropzone" id="excelDropzone">
+          <div class="dropzone-content">
+            <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <h4>Kéo thả file Excel vào đây hoặc bấm để chọn file</h4>
+            <p>Hỗ trợ định dạng: <strong>.xlsx, .xls, .csv</strong></p>
+            <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" style="display: none;" />
+            <button type="button" class="btn btn-outline btn-sm" id="btnSelectExcelFile">Chọn file từ máy tính</button>
+          </div>
+        </div>
+
+        <!-- Excel Helpers & Sample Download -->
+        <div class="excel-help-bar">
+          <div class="help-text">
+            💡 <strong>Quy cách cột Excel:</strong> Cần có cột <em>"Mã sản phẩm"</em> (hoặc <em>"Mã"</em>) và <em>"Tên sản phẩm"</em> (hoặc <em>"Tên"</em>). Cột <em>"Ngành hàng"</em> là tùy chọn.
+          </div>
+          <button type="button" class="btn-download-sample" id="btnDownloadSampleExcel" title="Tải file mẫu Excel chuẩn để điền danh mục">
+            📄 Tải file Excel mẫu
+          </button>
+        </div>
+
+        <!-- Excel Preview Table -->
+        <div class="excel-preview-section" id="excelPreviewSection" style="display: none;">
+          <div class="preview-header">
+            <h4>Bản xem trước sản phẩm đọc từ Excel (<span id="excelPreviewCount">0</span> sản phẩm):</h4>
+            <button type="button" class="btn btn-success btn-sm" id="btnConfirmImportExcel">
+              ✅ Xác nhận nạp vào hệ thống
+            </button>
+          </div>
+          <div class="table-responsive max-h-300">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 50px;">STT</th>
+                  <th style="width: 160px;">Mã sản phẩm</th>
+                  <th>Tên sản phẩm</th>
+                  <th style="width: 140px;">Ngành hàng</th>
+                </tr>
+              </thead>
+              <tbody id="excelPreviewTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Existing Products List -->
+        <div class="existing-products-section">
+          <div class="section-title-wrap">
+            <h4>Danh mục sản phẩm hiện có (<span id="currentProductsCount">0</span> sản phẩm):</h4>
+            <div class="action-btn-group">
+              <button type="button" class="btn btn-outline btn-sm text-danger" id="btnClearAllProducts">
+                🗑️ Xóa toàn bộ sản phẩm
+              </button>
+            </div>
+          </div>
+          <div class="table-responsive max-h-250">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 50px;">STT</th>
+                  <th style="width: 150px;">Mã SP</th>
+                  <th>Tên sản phẩm</th>
+                  <th style="width: 130px;">Ngành hàng</th>
+                  <th style="width: 80px; text-align: right;">Xóa</th>
+                </tr>
+              </thead>
+              <tbody id="currentProductsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL 5: XÁC NHẬN HÀNG VỀ KHO (DÀNH CHO ADMIN / THỦ KHO) -->
+  <!-- ======================================================== -->
+  <div class="modal-overlay" id="modalConfirmWarehouse" style="display: none;">
+    <div class="modal-card modal-md">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon-badge icon-warehouse">🏢</div>
+          <div>
+            <h3 class="modal-heading">Xác Nhận Hàng Lỗi Đã Về Kho</h3>
+            <p class="modal-subheading">Xác nhận thủ kho đã kiểm đếm và cất trữ sản phẩm lỗi an toàn</p>
+          </div>
+        </div>
+        <button class="btn-close-modal" id="btnCloseWarehouseModal">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="confirm-order-summary" id="confirmOrderSummary">
+          <!-- Filled dynamically -->
+        </div>
+
+        <form id="warehouseConfirmForm">
+          <div class="form-group">
+            <label class="form-label" for="inputWarehouseLocation">Vị trí lưu kho / Kệ hàng lỗi (nếu có):</label>
+            <input 
+              type="text" 
+              id="inputWarehouseLocation" 
+              class="form-control" 
+              placeholder="VD: Kệ A1-Hàng đổi trả, Thùng lỗi hãng..."
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="inputWarehouseNotes">Ghi chú khi nhập kho:</label>
+            <textarea 
+              id="inputWarehouseNotes" 
+              class="form-control" 
+              rows="2" 
+              placeholder="VD: Đã kiểm tra thân máy, đầy đủ phụ kiện..."
+            ></textarea>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" id="btnCancelWarehouseConfirm">Hủy</button>
+            <button type="submit" class="btn btn-success" id="btnSubmitWarehouseConfirm">
+              ✅ Xác nhận: Hàng đã về kho
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL 6: XEM CHI TIẾT & IN PHIẾU TIẾP NHẬN ĐỔI LỖI (PRINT) -->
+  <!-- ======================================================== -->
+  <div class="modal-overlay" id="modalReceipt" style="display: none;">
+    <div class="modal-card modal-lg">
+      <div class="modal-header no-print">
+        <div class="modal-title-group">
+          <div class="modal-icon-badge">🖨️</div>
+          <div>
+            <h3 class="modal-heading">Phiếu Tiếp Nhận Đổi Lỗi Khách Hàng</h3>
+            <p class="modal-subheading">Bản in gửi khách hàng và lưu trữ hồ sơ siêu thị</p>
+          </div>
+        </div>
+        <div class="action-btn-group">
+          <button type="button" class="btn btn-primary" id="btnPrintReceipt">
+            🖨️ In Phiếu Tiếp Nhận
+          </button>
+          <button class="btn-close-modal" id="btnCloseReceipt">✕</button>
+        </div>
+      </div>
+
+      <div class="modal-body print-wrapper" id="receiptPrintArea">
+        <!-- Printable Slip Content -->
+        <div class="receipt-paper">
+          <div class="receipt-header">
+            <div class="receipt-brand">
+              <h2 class="receipt-company">HỆ THỐNG SIÊU THỊ ĐIỆN MÁY XANH</h2>
+              <p class="receipt-branch">TRUNG TÂM TIẾP NHẬN BẢO HÀNH & ĐỔI LỖI SẢN PHẨM</p>
+            </div>
+            <div class="receipt-code-box">
+              <svg id="receiptBarcode"></svg>
+              <div class="receipt-order-no" id="printOrderCode">DL-XXXXXX-XXXX</div>
+            </div>
+          </div>
+
+          <h3 class="receipt-main-title">BIÊN NHẬN ĐỔI TRẢ & BẢO HÀNH HÀNG HOÁ</h3>
+          <div class="receipt-meta">
+            <span>Ngày giờ lập phiếu: <strong id="printOrderTime">--:-- --/--/----</strong></span>
+            <span>Nhân viên tiếp nhận: <strong id="printStaffName">--</strong></span>
+          </div>
+
+          <!-- Section 1: Customer Info -->
+          <div class="receipt-section">
+            <h4 class="receipt-sec-title">1. THÔNG TIN KHÁCH HÀNG</h4>
+            <div class="receipt-grid-2">
+              <div>Họ và tên khách hàng: <strong id="printCustomerName">--</strong></div>
+              <div>Số điện thoại liên hệ: <strong id="printCustomerPhone">--</strong></div>
+            </div>
+          </div>
+
+          <!-- Section 2: Product & Defect Details -->
+          <div class="receipt-section">
+            <h4 class="receipt-sec-title">2. THÔNG TIN SẢN PHẨM & TÌNH TRẠNG LỖI</h4>
+            <table class="receipt-table">
+              <tr>
+                <td style="width: 25%;">Tên sản phẩm:</td>
+                <td><strong id="printProductName">--</strong> (<span id="printProductCode">Mã SP: --</span>)</td>
+              </tr>
+              <tr>
+                <td>Số Serial / IMEI:</td>
+                <td><span id="printSerial">--</span></td>
+              </tr>
+              <tr>
+                <td>Triệu chứng lỗi:</td>
+                <td><strong id="printDefectReason">--</strong></td>
+              </tr>
+              <tr>
+                <td>Phụ kiện gửi kèm:</td>
+                <td><span id="printAccessories">--</span></td>
+              </tr>
+              <tr>
+                <td>Hình thức giải quyết:</td>
+                <td><strong id="printResolution">--</strong></td>
+              </tr>
+              <tr>
+                <td>Trạng thái kho:</td>
+                <td><span id="printWarehouseStatus">--</span></td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Signatures -->
+          <div class="receipt-signatures">
+            <div class="sig-block">
+              <strong>KHÁCH HÀNG</strong>
+              <p>(Ký và ghi rõ họ tên)</p>
+              <div class="sig-space"></div>
+              <div class="sig-name" id="printSigCustomer"></div>
+            </div>
+            <div class="sig-block">
+              <strong>NHÂN VIÊN TIẾP NHẬN</strong>
+              <p>(Ký và ghi rõ họ tên)</p>
+              <div class="sig-space"></div>
+              <div class="sig-name" id="printSigStaff"></div>
+            </div>
+            <div class="sig-block">
+              <strong>XÁC NHẬN THỦ KHO</strong>
+              <p>(Ký khi hàng về kho)</p>
+              <div class="sig-space"></div>
+              <div class="sig-name" id="printSigWarehouse"></div>
+            </div>
+          </div>
+
+          <div class="receipt-footer-note">
+            ⚠️ <em>Quý khách vui lòng giữ biên nhận này để đối chiếu khi nhận lại sản phẩm hoặc hoàn tất thủ tục đổi hàng. Mọi thắc mắc vui lòng liên hệ tổng đài Điện Máy Xanh.</em>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Box -->
+  <div class="toast-box" id="toastBox">
+    <span class="toast-icon" id="toastIcon">✅</span>
+    <span class="toast-message" id="toastMessage">Thông báo</span>
+  </div>
+
+  <!-- Application Logic Scripts -->
+  <script src="firebase-config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
