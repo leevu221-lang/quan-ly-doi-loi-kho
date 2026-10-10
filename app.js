@@ -1417,6 +1417,20 @@ function renderOrdersTable() {
 
   DOM.ordersTableBody.innerHTML = filtered.map((o, idx) => {
     const isReceived = (o.warehouseStatus === "DA_VE_KHO");
+    const rawCreateTime = o.displayTime || formatDateTime(o.createdAt);
+    let createTimeTxt = "";
+    let createDateTxt = "";
+    if (rawCreateTime) {
+      const parts = rawCreateTime.trim().split(" ");
+      if (parts.length >= 2) {
+        createTimeTxt = parts[0];
+        createDateTxt = parts.slice(1).join(" ");
+      } else {
+        createTimeTxt = rawCreateTime;
+        createDateTxt = "";
+      }
+    }
+
     const rawWhTime = o.warehouseDisplayTime || (o.warehouseTime ? formatDateTime(o.warehouseTime) : "");
     let whTimeTxt = "";
     let whDateTxt = "";
@@ -1435,11 +1449,11 @@ function renderOrdersTable() {
       <tr class="${isReceived ? 'row-received' : 'row-pending'}">
         <td style="color: var(--text-muted);">${idx + 1}</td>
         
-        <!-- Mã phiếu & Thời gian -->
+        <!-- Ngày tạo -->
         <td>
-          <div class="order-code-box">
-            <span class="order-code">${escapeHtml(o.orderCode)}</span>
-            <span class="order-time">${escapeHtml(o.displayTime || formatDateTime(o.createdAt))}</span>
+          <div class="created-time-box" title="Mã phiếu: ${escapeHtml(o.orderCode)} - Tạo lúc: ${escapeHtml(rawCreateTime)}">
+            <span class="created-time-val">${escapeHtml(createTimeTxt)}</span>
+            ${createDateTxt ? `<span class="created-date-val">${escapeHtml(createDateTxt)}</span>` : ''}
           </div>
         </td>
 
