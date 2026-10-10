@@ -31,7 +31,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <!-- Main Stylesheet (Cache-busted) -->
-  <link rel="stylesheet" href="style.css?v=3.8">
+  <link rel="stylesheet" href="style.css?v=3.9">
 </head>
 <body class="theme-light">
 
@@ -112,7 +112,7 @@
                 <p>Dành cho Quản trị viên & Thủ kho</p>
               </div>
             </button>
-            <button class="dropdown-item" id="btnMenuManageStaff">
+            <button class="dropdown-item admin-only-item" id="btnMenuManageStaff">
               <span class="item-icon">👥</span>
               <div>
                 <strong>Quản lý nhân viên</strong>
@@ -215,8 +215,8 @@
             <span>➕ Nhập Đổi Lỗi Mới</span>
           </button>
 
-          <!-- Button Quản lý Nhân Viên (Thêm, Sửa, Xóa) -->
-          <button type="button" class="btn btn-outline" id="btnOpenManageStaffModal" title="Thêm mới, sửa hoặc xóa nhân viên tiếp nhận">
+          <!-- Button Quản lý Nhân Viên (Thêm, Sửa, Xóa - Chỉ Admin) -->
+          <button type="button" class="btn btn-outline admin-only-btn" id="btnOpenManageStaffModal" title="Thêm mới, sửa hoặc xóa nhân viên tiếp nhận (Chỉ Admin)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon text-primary">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
               <circle cx="9" cy="7" r="4"></circle>
@@ -227,7 +227,7 @@
           </button>
 
           <!-- Button Import Excel Sản Phẩm (Dành riêng cho Admin) -->
-          <button type="button" class="btn btn-outline admin-only-btn" id="btnOpenExcelModal" title="Tải file Excel danh mục tên sản phẩm để nhân viên chọn">
+          <button type="button" class="btn btn-outline admin-only-btn" id="btnOpenExcelModal" title="Tải file Excel danh mục tên sản phẩm để nhân viên chọn (Chỉ Admin)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon text-success">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
               <polyline points="14 2 14 8 20 8"></polyline>
@@ -237,8 +237,8 @@
             <span>📥 Quản lý Sản Phẩm (Excel)</span>
           </button>
 
-          <!-- Button Xuất Excel Danh Sách Đơn -->
-          <button type="button" class="btn btn-outline" id="btnExportOrdersExcel" title="Xuất toàn bộ đơn đổi lỗi ra file Excel">
+          <!-- Button Xuất Excel Danh Sách Đơn (Chỉ Admin) -->
+          <button type="button" class="btn btn-outline admin-only-btn" id="btnExportOrdersExcel" title="Xuất toàn bộ đơn đổi lỗi ra file Excel (Chỉ Admin)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
               <polyline points="7 10 12 15 17 10"></polyline>
@@ -381,7 +381,7 @@
             <span>🛡️ Quản lý / Thủ kho:</span>
           </div>
           <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <button type="button" class="btn btn-outline btn-sm" id="btnOpenStaffManageFromLogin" title="Thêm mới, chỉnh sửa hoặc xóa nhân viên">
+            <button type="button" class="btn btn-outline btn-sm admin-only-btn" id="btnOpenStaffManageFromLogin" title="Thêm mới, chỉnh sửa hoặc xóa nhân viên">
               <span>👥 Quản lý Nhân Viên</span>
             </button>
             <button type="button" class="btn btn-outline btn-sm" id="btnSwitchToAdminLogin">
@@ -901,7 +901,7 @@
   </div>
 
   <!-- Application Logic Scripts (Cache-busted) -->
-  <script src="firebase-config.js?v=3.8"></script>
-  <script src="app.js?v=3.8"></script>
+  <script src="firebase-config.js?v=3.9"></script>
+  <script src="app.js?v=3.9"></script>
 </body>
 </html>

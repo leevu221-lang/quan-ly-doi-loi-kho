@@ -520,6 +520,11 @@ function handleStaffSearchAutocomplete(query) {
 // 3.1. QUẢN LÝ NHÂN VIÊN (THÊM / SỬA / XÓA & ĐỒNG BỘ CLOUD)
 // ==============================================================================
 function openManageStaffModal() {
+  if (State.currentUser.role !== "admin") {
+    showToast("Chức năng Quản lý Nhân viên chỉ dành cho Quản trị viên (Admin)!", "warning");
+    openModal(DOM.modalLoginAdmin);
+    return;
+  }
   const modal = DOM.modalManageStaff || document.getElementById("modalManageStaff");
   if (!modal) {
     console.error("modalManageStaff element not found");
@@ -1282,6 +1287,11 @@ function openReceiptModal(order) {
 // 8. XUẤT TOÀN BỘ ĐƠN RA FILE EXCEL
 // ==============================================================================
 function exportOrdersToExcel() {
+  if (State.currentUser.role !== "admin") {
+    showToast("Chức năng Xuất Excel đơn chỉ dành cho Quản trị viên (Admin)!", "warning");
+    openModal(DOM.modalLoginAdmin);
+    return;
+  }
   if (!State.orders.length) {
     showToast("Chưa có đơn đổi lỗi nào để xuất Excel!", "warning");
     return;

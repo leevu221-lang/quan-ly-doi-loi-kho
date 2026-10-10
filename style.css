@@ -1960,3 +1960,24 @@ body.theme-dark .print-wrapper {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* ==============================================================================
+   PHÂN QUYỀN CHỨC NĂNG (CHỈ HIỂN THỊ VỚI QUYỀN ADMIN, NHÂN VIÊN SẼ ẨN)
+   ============================================================================== */
+.admin-only-btn,
+.admin-only {
+  display: none !important;
+}
+
+body.is-admin .admin-only-btn,
+body.is-admin .admin-only {
+  display: inline-flex !important;
+}
+
+.admin-only-item {
+  display: none !important;
+}
+
+body.is-admin .admin-only-item {
+  display: flex !important;
+}
