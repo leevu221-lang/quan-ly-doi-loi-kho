@@ -104,7 +104,7 @@
               <span class="item-icon">🛡️</span>
               <div>
                 <strong>Quản trị viên (Admin)</strong>
-                <p>Mật khẩu: 43751 - Toàn quyền kho & Excel</p>
+                <p>Dành cho Quản trị viên & Thủ kho</p>
               </div>
             </button>
             <div class="dropdown-divider" id="dropdownDividerLogout" style="display: none;"></div>
@@ -329,7 +329,7 @@
         </div>
 
         <div class="form-group" style="margin-top: 10px;">
-          <label class="form-label" for="staffSearchInput">Tìm mã nhân viên hoặc tên của bạn:</label>
+          <label class="form-label" for="staffSearchInput">Chọn hoặc tìm mã nhân viên / tên của bạn:</label>
           <div class="input-search-box">
             <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="11" cy="11" r="8"></circle>
@@ -339,7 +339,7 @@
               type="text" 
               id="staffSearchInput" 
               class="form-control" 
-              placeholder="Gõ mã (VD: 38834) hoặc tên (VD: Thắm, Mạnh, Nhạn...)" 
+              placeholder="Bấm vào đây để chọn hoặc gõ mã / tên NV..." 
               autocomplete="off"
               autofocus
             />
@@ -348,8 +348,7 @@
           <div class="staff-suggestions-dropdown" id="staffSuggestionsDropdown"></div>
         </div>
 
-        <div class="staff-quick-pick">
-          <div class="quick-pick-title">Hoặc chọn nhanh từ danh sách 10 nhân viên siêu thị:</div>
+        <div class="staff-quick-pick" style="display: none;">
           <div class="staff-chips-grid" id="staffChipsList"></div>
         </div>
 
@@ -393,7 +392,6 @@
               required
               autocomplete="current-password"
             />
-            <div class="form-hint">Mật khẩu mặc định hệ thống: <code>43751</code></div>
           </div>
           <div class="modal-footer" style="padding: 12px 0 0 0;">
             <button type="button" class="btn btn-outline" id="btnCancelAdminLogin">Hủy</button>

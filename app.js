@@ -261,10 +261,11 @@ function showStaffSelectionGate() {
     openModal(DOM.modalLoginStaff);
     if (DOM.staffSearchInput) {
       DOM.staffSearchInput.value = "";
-      if (DOM.staffSuggestionsDropdown) DOM.staffSuggestionsDropdown.style.display = "none";
-      setTimeout(() => DOM.staffSearchInput.focus(), 250);
+      setTimeout(() => {
+        DOM.staffSearchInput.focus();
+        handleStaffSearchAutocomplete("");
+      }, 200);
     }
-    renderStaffChipsInModal();
   }
 }
 
@@ -279,7 +280,7 @@ function updateUserBadgeUI() {
     DOM.btnUserBadge.classList.add("role-admin");
     DOM.userBadgeIcon.textContent = "🛡️";
     DOM.userBadgeRole.textContent = "Quản trị viên";
-    DOM.userBadgeName.textContent = "Admin (43751)";
+    DOM.userBadgeName.textContent = "Quản trị viên (Admin)";
     DOM.btnMenuLogout.style.display = "flex";
     DOM.dropdownDividerLogout.style.display = "block";
     document.body.classList.add("is-admin");
@@ -366,52 +367,39 @@ function renderStaffChipsInModal() {
   });
 }
 
-// Tìm kiếm autocomplete nhân viên (không cần password) & lọc trực tiếp các thẻ bên dưới
+// Tìm kiếm autocomplete nhân viên & hiển thị danh sách 10 nhân viên
 function handleStaffSearchAutocomplete(query) {
   const cleanQ = removeVietnameseTones((query || "").trim().toLowerCase());
+  const lastCode = localStorage.getItem("dmx_last_staff_code") || "";
 
-  // Lọc trực tiếp 10 thẻ nhân viên bên dưới theo từ khóa
-  if (DOM.staffChipsList) {
-    const chipBtns = DOM.staffChipsList.querySelectorAll(".staff-chip-btn");
-    chipBtns.forEach(btn => {
-      const code = btn.getAttribute("data-code");
-      const staff = State.staffList.find(s => s.code === code);
-      if (!cleanQ) {
-        btn.style.display = "flex";
-      } else if (staff) {
-        const match = staff.code.toLowerCase().includes(cleanQ) || 
-                      removeVietnameseTones(staff.name.toLowerCase()).includes(cleanQ);
-        btn.style.display = match ? "flex" : "none";
-      }
-    });
-  }
-
-  if (!cleanQ) {
-    DOM.staffSuggestionsDropdown.style.display = "none";
-    return;
-  }
-
-  const matches = State.staffList.filter(s => {
-    const codeMatch = s.code.toLowerCase().includes(cleanQ);
-    const nameMatch = removeVietnameseTones(s.name.toLowerCase()).includes(cleanQ);
-    return codeMatch || nameMatch;
-  });
+  // Nếu rỗng: hiển thị toàn bộ 10 nhân viên
+  // Nếu có chữ: lọc theo mã hoặc tên
+  const matches = cleanQ 
+    ? State.staffList.filter(s => {
+        const codeMatch = s.code.toLowerCase().includes(cleanQ);
+        const nameMatch = removeVietnameseTones(s.name.toLowerCase()).includes(cleanQ);
+        return codeMatch || nameMatch;
+      })
+    : State.staffList;
 
   if (!matches.length) {
-    DOM.staffSuggestionsDropdown.innerHTML = `<div class="dropdown-option" style="color: var(--text-muted);">Không tìm thấy nhân viên "${query}"</div>`;
+    DOM.staffSuggestionsDropdown.innerHTML = `<div class="dropdown-option" style="color: var(--text-muted); cursor: default; padding: 12px 14px;">Không tìm thấy nhân viên "${escapeHtml(query)}"</div>`;
     DOM.staffSuggestionsDropdown.style.display = "block";
     return;
   }
 
-  DOM.staffSuggestionsDropdown.innerHTML = matches.map(st => `
-    <div class="dropdown-option" data-code="${st.code}">
-      <div>
-        <div class="opt-title">${st.name}</div>
-        <div class="opt-sub">Mã nhân viên: <strong>${st.code}</strong></div>
+  DOM.staffSuggestionsDropdown.innerHTML = matches.map(st => {
+    const isRecent = st.code === lastCode ? ` <span style="font-size: 10px; font-weight: 700; color: #fff; background: var(--primary); padding: 2px 6px; border-radius: 4px; margin-left: 6px;">Gần nhất</span>` : "";
+    return `
+      <div class="dropdown-option" data-code="${st.code}">
+        <div>
+          <div class="opt-title">${st.name}${isRecent}</div>
+          <div class="opt-sub">Mã nhân viên: <strong style="color: var(--primary);">${st.code}</strong></div>
+        </div>
+        <span class="opt-badge">Vào web ➔</span>
       </div>
-      <span class="opt-badge">Đăng nhập</span>
-    </div>
-  `).join("");
+    `;
+  }).join("");
 
   DOM.staffSuggestionsDropdown.style.display = "block";
 
@@ -721,7 +709,7 @@ async function handleWarehouseConfirmSubmit(e) {
 // Xóa đơn (Chỉ quyền Admin)
 async function handleDeleteOrder(orderCode) {
   if (State.currentUser.role !== "admin") {
-    showToast("Chỉ tài khoản Admin (mật khẩu 43751) mới có quyền xóa đơn!", "error");
+    showToast("Chỉ tài khoản Quản trị viên (Admin) mới có quyền xóa đơn!", "error");
     openModal(DOM.modalLoginAdmin);
     return;
   }
@@ -1240,6 +1228,12 @@ function setupEventListeners() {
   DOM.staffSearchInput.addEventListener("input", (e) => {
     handleStaffSearchAutocomplete(e.target.value);
   });
+  DOM.staffSearchInput.addEventListener("focus", () => {
+    handleStaffSearchAutocomplete(DOM.staffSearchInput.value);
+  });
+  DOM.staffSearchInput.addEventListener("click", () => {
+    handleStaffSearchAutocomplete(DOM.staffSearchInput.value);
+  });
   DOM.staffSearchInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -1262,7 +1256,7 @@ function setupEventListeners() {
     if (pass === ADMIN_PASSWORD) {
       loginAsAdmin();
     } else {
-      showToast("Sai mật khẩu Admin! (Mật khẩu chuẩn: 43751)", "error");
+      showToast("Sai mật khẩu Admin! Vui lòng kiểm tra lại.", "error");
       DOM.adminPasswordInput.value = "";
       DOM.adminPasswordInput.focus();
     }

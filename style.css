@@ -1258,8 +1258,7 @@ textarea.form-control {
   margin-top: 2px;
 }
 
-/* Autocomplete Dropdown */
-.product-dropdown, .staff-suggestions-dropdown {
+.product-dropdown {
   position: absolute;
   top: 100%;
   left: 0;
@@ -1272,6 +1271,22 @@ textarea.form-control {
   overflow-y: auto;
   z-index: 100;
   margin-top: 4px;
+}
+
+.staff-suggestions-dropdown {
+  position: relative;
+  margin-top: 8px;
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  max-height: 290px;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+.staff-quick-pick {
+  display: none !important;
 }
 
 .dropdown-option {
