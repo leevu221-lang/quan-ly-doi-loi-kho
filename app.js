@@ -281,6 +281,14 @@ function initStoredData() {
   if (storedOrders) {
     try {
       State.orders = JSON.parse(storedOrders);
+      if (Array.isArray(State.orders)) {
+        State.orders.sort((a, b) => {
+          const timeA = getOrderTimestamp(a);
+          const timeB = getOrderTimestamp(b);
+          if (timeB !== timeA) return timeB - timeA;
+          return (b.orderCode || "").localeCompare(a.orderCode || "");
+        });
+      }
     } catch(e) {
       State.orders = [];
     }
@@ -743,6 +751,59 @@ function formatDateTime(date) {
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const yyyy = d.getFullYear();
   return `${hh}:${min}:${ss} ${dd}/${mm}/${yyyy}`;
+}
+
+function getOrderTimestamp(order) {
+  if (!order) return 0;
+
+  // 1. Kiểm tra order.createdAt (ISO String, Timestamp, Number)
+  if (order.createdAt) {
+    if (typeof order.createdAt === "number") return order.createdAt;
+    if (typeof order.createdAt === "object" && typeof order.createdAt.toMillis === "function") {
+      return order.createdAt.toMillis();
+    }
+    if (typeof order.createdAt === "object" && order.createdAt.seconds) {
+      return order.createdAt.seconds * 1000;
+    }
+    const t = new Date(order.createdAt).getTime();
+    if (!isNaN(t) && t > 0) return t;
+  }
+
+  // 2. Phân tích displayTime (hh:mm:ss dd/mm/yyyy)
+  if (order.displayTime) {
+    const parts = order.displayTime.trim().split(" ");
+    if (parts.length >= 2) {
+      const timeParts = parts[0].split(":");
+      const dateParts = parts[1].split("/");
+      if (dateParts.length === 3 && timeParts.length >= 2) {
+        const d = parseInt(dateParts[0], 10);
+        const m = parseInt(dateParts[1], 10) - 1;
+        const y = parseInt(dateParts[2], 10);
+        const hh = parseInt(timeParts[0], 10) || 0;
+        const mm = parseInt(timeParts[1], 10) || 0;
+        const ss = parseInt(timeParts[2], 10) || 0;
+        const parsedDate = new Date(y, m, d, hh, mm, ss);
+        if (!isNaN(parsedDate.getTime())) return parsedDate.getTime();
+      }
+    }
+  }
+
+  // 3. Fallback theo mã phiếu DL-YYMMDD-XXXX
+  if (order.orderCode && typeof order.orderCode === "string" && order.orderCode.startsWith("DL-")) {
+    const segs = order.orderCode.split("-");
+    if (segs.length >= 3) {
+      const datePart = segs[1]; // YYMMDD
+      const seqPart = parseInt(segs[2], 10) || 0;
+      if (datePart.length === 6) {
+        const y = 2000 + parseInt(datePart.slice(0, 2), 10);
+        const m = parseInt(datePart.slice(2, 4), 10) - 1;
+        const d = parseInt(datePart.slice(4, 6), 10);
+        return new Date(y, m, d).getTime() + seqPart * 1000;
+      }
+    }
+  }
+
+  return 0;
 }
 
 function openNewOrderModal() {
@@ -1316,7 +1377,14 @@ function exportOrdersToExcel() {
     ]
   ];
 
-  State.orders.forEach(o => {
+  const sortedOrders = [...State.orders].sort((a, b) => {
+    const timeA = getOrderTimestamp(a);
+    const timeB = getOrderTimestamp(b);
+    if (timeB !== timeA) return timeB - timeA;
+    return (b.orderCode || "").localeCompare(a.orderCode || "");
+  });
+
+  sortedOrders.forEach(o => {
     const rawWhTime = o.warehouseDisplayTime || (o.warehouseTime ? formatDateTime(o.warehouseTime) : "");
     exportRows.push([
       o.orderCode,
@@ -1369,7 +1437,7 @@ function renderStaffFilterOptions() {
 }
 
 function getFilteredOrders() {
-  return State.orders.filter(o => {
+  const filtered = State.orders.filter(o => {
     // 1. Status Filter
     if (State.filterStatus === "CHUA_VE_KHO" && o.warehouseStatus === "DA_VE_KHO") return false;
     if (State.filterStatus === "DA_VE_KHO" && o.warehouseStatus !== "DA_VE_KHO") return false;
@@ -1401,6 +1469,18 @@ function getFilteredOrders() {
 
     return true;
   });
+
+  // Luôn sắp xếp theo Ngày tạo gần nhất (mới nhất) lên trên cùng
+  filtered.sort((a, b) => {
+    const timeA = getOrderTimestamp(a);
+    const timeB = getOrderTimestamp(b);
+    if (timeB !== timeA) {
+      return timeB - timeA;
+    }
+    return (b.orderCode || "").localeCompare(a.orderCode || "");
+  });
+
+  return filtered;
 }
 
 function renderOrdersTable() {
@@ -1929,6 +2009,14 @@ function handleFirebaseStatusChange(isOnline, message) {
 }
 
 function handleFirebaseOrdersUpdated(ordersList) {
+  if (Array.isArray(ordersList)) {
+    ordersList.sort((a, b) => {
+      const timeA = getOrderTimestamp(a);
+      const timeB = getOrderTimestamp(b);
+      if (timeB !== timeA) return timeB - timeA;
+      return (b.orderCode || "").localeCompare(a.orderCode || "");
+    });
+  }
   State.orders = ordersList;
   localStorage.setItem('dmx_doi_loi_orders', JSON.stringify(ordersList));
   fixAdminStaffInOrders();
