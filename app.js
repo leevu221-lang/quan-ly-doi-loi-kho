@@ -840,7 +840,7 @@ async function handleNewOrderSubmit(e) {
   e.preventDefault();
 
   const phone = DOM.inputCustomerPhone.value.trim();
-  const customerName = DOM.inputCustomerName.value.trim();
+  const customerName = cleanAndFormatTitleCase(DOM.inputCustomerName.value);
   const productName = State.selectedProduct 
     ? State.selectedProduct.name 
     : DOM.inputProductSearch.value.trim();
@@ -905,8 +905,8 @@ function handleCustomerPhoneInput(e) {
   if (phone.length >= 10) {
     const prevOrder = State.orders.find(o => o.customerPhone === phone);
     if (prevOrder && !DOM.inputCustomerName.value.trim()) {
-      DOM.inputCustomerName.value = prevOrder.customerName;
-      showToast(`Tìm thấy khách quen: ${prevOrder.customerName}`, "info");
+      DOM.inputCustomerName.value = cleanAndFormatTitleCase(prevOrder.customerName);
+      showToast(`Tìm thấy khách quen: ${cleanAndFormatTitleCase(prevOrder.customerName)}`, "info");
     }
   }
 }
@@ -946,7 +946,7 @@ function openWarehouseConfirmModal(orderCode) {
     </div>
     <div class="confirm-summary-row">
       <span class="label">Khách hàng:</span>
-      <span class="val">${escapeHtml(order.customerName)} (${escapeHtml(order.customerPhone)})</span>
+      <span class="val">${escapeHtml(formatTitleCase(order.customerName))} (${escapeHtml(order.customerPhone)})</span>
     </div>
     <div class="confirm-summary-row">
       <span class="label">Nhân viên tiếp nhận:</span>
@@ -1214,7 +1214,7 @@ function openReceiptModal(order) {
   document.getElementById("printOrderCode").textContent = order.orderCode;
   document.getElementById("printOrderTime").textContent = order.displayTime || formatDateTime(order.createdAt);
   document.getElementById("printStaffName").textContent = `${order.staffName} (${order.staffCode})`;
-  document.getElementById("printCustomerName").textContent = order.customerName;
+  document.getElementById("printCustomerName").textContent = formatTitleCase(order.customerName);
   document.getElementById("printCustomerPhone").textContent = order.customerPhone;
   document.getElementById("printProductName").textContent = order.productName;
   const elPrintNotes = document.getElementById("printNotes");
@@ -1225,7 +1225,7 @@ function openReceiptModal(order) {
     : "⚠️ CHƯA VỀ KHO (Đang giữ tại quầy)";
   document.getElementById("printWarehouseStatus").textContent = whStatusTxt;
 
-  document.getElementById("printSigCustomer").textContent = order.customerName;
+  document.getElementById("printSigCustomer").textContent = formatTitleCase(order.customerName);
   document.getElementById("printSigStaff").textContent = order.staffName;
   document.getElementById("printSigWarehouse").textContent = order.warehouseConfirmedBy || "";
 
@@ -1280,7 +1280,7 @@ function exportOrdersToExcel() {
       o.orderCode,
       o.displayTime || formatDateTime(o.createdAt),
       o.customerPhone,
-      o.customerName,
+      formatTitleCase(o.customerName),
       o.productCode,
       o.productName,
       o.notes || "",
@@ -1390,7 +1390,7 @@ function renderOrdersTable() {
         <!-- Khách hàng -->
         <td>
           <div class="customer-info-box">
-            <strong>${escapeHtml(o.customerName)}</strong>
+            <strong>${escapeHtml(formatTitleCase(o.customerName))}</strong>
             <a href="tel:${escapeHtml(o.customerPhone)}" class="customer-phone-link">
               📞 ${escapeHtml(o.customerPhone)}
             </a>
@@ -1630,6 +1630,26 @@ function setupEventListeners() {
   DOM.newOrderForm.addEventListener("submit", handleNewOrderSubmit);
 
   DOM.inputCustomerPhone.addEventListener("input", handleCustomerPhoneInput);
+
+  // Tự động viết hoa chữ cái đầu khi nhập Họ tên khách hàng (Title Case)
+  if (DOM.inputCustomerName) {
+    DOM.inputCustomerName.addEventListener("blur", (e) => {
+      e.target.value = cleanAndFormatTitleCase(e.target.value);
+    });
+    DOM.inputCustomerName.addEventListener("change", (e) => {
+      e.target.value = cleanAndFormatTitleCase(e.target.value);
+    });
+    DOM.inputCustomerName.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.target.value = cleanAndFormatTitleCase(e.target.value);
+      }
+    });
+    DOM.inputCustomerName.addEventListener("paste", () => {
+      setTimeout(() => {
+        DOM.inputCustomerName.value = cleanAndFormatTitleCase(DOM.inputCustomerName.value);
+      }, 10);
+    });
+  }
   DOM.inputProductSearch.addEventListener("input", (e) => {
     handleProductSearchAutocomplete(e.target.value);
   });
@@ -1852,6 +1872,19 @@ function showToast(message, type = "success") {
 
   DOM.toastBox.classList.add("show");
   setTimeout(() => DOM.toastBox.classList.remove("show"), 3600);
+}
+
+// Chuẩn hóa và viết hoa chữ cái đầu mỗi từ (Họ tên tiếng Việt chuẩn)
+function formatTitleCase(str) {
+  if (!str) return "";
+  return String(str)
+    .toLowerCase()
+    .replace(/(?:^|[\s\/\-_])\S/gu, char => char.toUpperCase());
+}
+
+function cleanAndFormatTitleCase(str) {
+  if (!str) return "";
+  return formatTitleCase(String(str).trim().replace(/\s+/g, " "));
 }
 
 function removeVietnameseTones(str) {

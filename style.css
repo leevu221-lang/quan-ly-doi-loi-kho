@@ -1216,6 +1216,11 @@ textarea.form-control {
   padding-left: 38px;
 }
 
+#inputCustomerName,
+.capitalize-input {
+  text-transform: capitalize;
+}
+
 .input-search-box {
   position: relative;
 }

@@ -31,7 +31,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <!-- Main Stylesheet (Cache-busted) -->
-  <link rel="stylesheet" href="style.css?v=3.4">
+  <link rel="stylesheet" href="style.css?v=3.5">
 </head>
 <body class="theme-light">
 
@@ -501,6 +501,9 @@
                   id="inputCustomerName" 
                   class="form-control" 
                   placeholder="Nhập họ và tên khách hàng..." 
+                  autocapitalize="words"
+                  autocomplete="name"
+                  style="text-transform: capitalize;"
                   required
                 />
               </div>
@@ -897,7 +900,7 @@
   </div>
 
   <!-- Application Logic Scripts (Cache-busted) -->
-  <script src="firebase-config.js?v=3.4"></script>
-  <script src="app.js?v=3.4"></script>
+  <script src="firebase-config.js?v=3.5"></script>
+  <script src="app.js?v=3.5"></script>
 </body>
 </html>
