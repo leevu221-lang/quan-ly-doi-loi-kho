@@ -31,7 +31,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <!-- Main Stylesheet (Cache-busted) -->
-  <link rel="stylesheet" href="style.css?v=3.9">
+  <link rel="stylesheet" href="style.css?v=4.0">
 </head>
 <body class="theme-light">
 
@@ -58,8 +58,8 @@
 
       <!-- Header Actions -->
       <div class="header-actions">
-        <!-- Firebase Status -->
-        <div class="firebase-status" id="firebaseStatusBadge" title="Trạng thái kết nối cơ sở dữ liệu Firebase Cloud Firestore">
+        <!-- Firebase Status (Ẩn theo yêu cầu) -->
+        <div class="firebase-status" id="firebaseStatusBadge" style="display: none;" title="Trạng thái kết nối cơ sở dữ liệu Firebase Cloud Firestore">
           <span class="status-dot"></span>
           <span class="status-label" id="firebaseStatusText">Firebase: Đang kết nối...</span>
         </div>
@@ -901,7 +901,7 @@
   </div>
 
   <!-- Application Logic Scripts (Cache-busted) -->
-  <script src="firebase-config.js?v=3.9"></script>
-  <script src="app.js?v=3.9"></script>
+  <script src="firebase-config.js?v=4.0"></script>
+  <script src="app.js?v=4.0"></script>
 </body>
 </html>

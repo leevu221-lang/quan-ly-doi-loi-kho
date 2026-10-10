@@ -212,18 +212,9 @@ body.theme-dark .app-header {
   gap: 12px;
 }
 
-/* Firebase Status Indicator */
+/* Firebase Status Indicator (Ẩn theo yêu cầu) */
 .firebase-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 6px 12px;
-  border-radius: var(--radius-full);
-  background: var(--bg-surface-subtle);
-  border: 1px solid var(--border-color);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-muted);
+  display: none !important;
 }
 .status-dot {
   width: 8px;
