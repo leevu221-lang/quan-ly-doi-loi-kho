@@ -31,7 +31,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <!-- Main Stylesheet (Cache-busted) -->
-  <link rel="stylesheet" href="style.css?v=5.2">
+  <link rel="stylesheet" href="style.css?v=5.3">
 </head>
 <body class="theme-light">
 
@@ -167,7 +167,7 @@
       </div>
 
       <div class="kpi-card kpi-warning" data-filter="pending" id="kpiCardPending">
-        <div class="kpi-icon-wrap icon-amber">
+        <div class="kpi-icon-wrap icon-rose">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"></circle>
             <polyline points="12 6 12 12 16 14"></polyline>
@@ -175,10 +175,10 @@
         </div>
         <div class="kpi-content">
           <span class="kpi-title">CHƯA VỀ KHO (Tại quầy)</span>
-          <div class="kpi-number text-amber" id="statPendingOrders">0</div>
+          <div class="kpi-number text-rose" id="statPendingOrders">0</div>
           <span class="kpi-desc">Cần thủ kho nhận & xác nhận</span>
         </div>
-        <span class="kpi-badge-pulse">Cần xử lý</span>
+        <span class="kpi-badge-pulse" style="background: rgba(239, 68, 68, 0.12); color: #dc2626; border-color: rgba(239, 68, 68, 0.3);">Cần xử lý</span>
       </div>
 
       <div class="kpi-card" data-filter="received" id="kpiCardReceived">
@@ -303,7 +303,7 @@
         <!-- Filter Status Pills -->
         <div class="filter-pills" id="filterStatusPills">
           <button type="button" class="pill active" data-status="ALL">Tất cả (<span id="countAll">0</span>)</button>
-          <button type="button" class="pill pill-pending" data-status="CHUA_VE_KHO">⚠️ Chưa về kho (<span id="countPending">0</span>)</button>
+          <button type="button" class="pill pill-pending" data-status="CHUA_VE_KHO">🔴 Chưa về kho (<span id="countPending">0</span>)</button>
           <button type="button" class="pill pill-received" data-status="DA_VE_KHO">✅ Đã về kho (<span id="countReceived">0</span>)</button>
         </div>
 
@@ -1010,7 +1010,7 @@
   </div>
 
   <!-- Application Logic Scripts (Cache-busted) -->
-  <script src="firebase-config.js?v=5.2"></script>
-  <script src="app.js?v=5.2"></script>
+  <script src="firebase-config.js?v=5.3"></script>
+  <script src="app.js?v=5.3"></script>
 </body>
 </html>

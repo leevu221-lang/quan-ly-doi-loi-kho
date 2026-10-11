@@ -1136,7 +1136,7 @@ function openWarehouseConfirmModal(orderCode) {
     </div>
     <div class="confirm-summary-row">
       <span class="label">Hiện tại:</span>
-      <span class="val text-amber font-mono">⚠️ CHƯA VỀ KHO (Tại quầy)</span>
+      <span class="val text-rose font-mono font-bold">🔴 CHƯA VỀ KHO (Tại quầy)</span>
     </div>
   `;
 
@@ -1460,7 +1460,7 @@ function openReceiptModal(order) {
 
   const whStatusTxt = order.warehouseStatus === "DA_VE_KHO" 
     ? `✅ ĐÃ VỀ KHO (${order.warehouseDisplayTime || formatDateTime(order.warehouseTime)})` 
-    : "⚠️ CHƯA VỀ KHO (Đang giữ tại quầy)";
+    : "🔴 CHƯA VỀ KHO (Đang giữ tại quầy)";
   document.getElementById("printWarehouseStatus").textContent = whStatusTxt;
 
   document.getElementById("printSigCustomer").textContent = formatTitleCase(order.customerName);
@@ -1718,7 +1718,7 @@ function renderOrdersTable() {
                 <span>🏢</span>
                 <span>${escapeHtml(o.warehouseConfirmedBy)}</span>
                </div>`
-            : `<span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--text-muted); padding: 3px 8px; border-radius: var(--radius-sm); background: var(--bg-surface-subtle); border: 1px dashed var(--border-color);" title="Chưa nhập kho">
+            : `<span class="staff-wh-pending-tag" title="Chưa nhập kho">
                 ⏳ Chưa nhận
                </span>`
           }
@@ -1742,7 +1742,7 @@ function renderOrdersTable() {
                 ✅ Đã về kho
                </span>`
             : `<span class="status-badge badge-pending" title="Hàng đang để tại quầy siêu thị, chưa chuyển về kho">
-                ⚠️ Chưa về kho
+                🔴 Chưa về kho
                </span>`
           }
         </td>
