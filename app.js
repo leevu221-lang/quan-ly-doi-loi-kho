@@ -1507,45 +1507,25 @@ function openReceiptModal(order) {
 // 7.1. XUẤT ẢNH & SAO CHÉP THÔNG TIN GỬI ZALO (CHƯA VỀ KHO)
 // ==============================================================================
 
-// Định dạng tin nhắn Zalo chuẩn gồm SĐT, Tên sản phẩm, Mã đơn & Cảnh báo chưa về kho
+// Định dạng tin nhắn Zalo chuẩn gồm SĐT, Tên khách hàng & Tên sản phẩm
 function formatZaloNoticeText(order) {
   if (!order) return "";
-  const createTime = order.displayTime || formatDateTime(order.createdAt);
   const custName = formatTitleCase(order.customerName) || "Khách lẻ";
-  const branchName = State.currentBranch ? `Kho ${State.currentBranch}` : "Siêu thị";
   const phone = order.customerPhone || "Chưa có";
   const prodName = order.productName || "Sản phẩm đổi lỗi";
   const isReceived = (order.warehouseStatus === "DA_VE_KHO");
 
-  if (!isReceived) {
-    return [
-      `⚠️ THÔNG BÁO: HÀNG ĐỔI LỖI CHƯA VỀ KHO (${branchName.toUpperCase()})`,
-      `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-      `📞 SĐT KHÁCH: ${phone}`,
-      `👤 Tên khách hàng: ${custName}`,
-      `📦 Sản phẩm: ${prodName}`,
-      order.productCode && order.productCode !== "KHAC" ? `🏷️ Mã SP: ${order.productCode}` : null,
-      order.notes ? `📝 Ghi chú: ${order.notes}` : null,
-      `⏰ Ngày tạo phiếu: ${createTime}`,
-      `👨‍💼 NV tạo phiếu: ${order.staffName}${order.staffCode ? ` (${order.staffCode})` : ""}`,
-      `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-      `🚨 TÌNH TRẠNG: Sản phẩm này chưa được mang hàng lỗi về siêu thị!`,
-      `👉 Đề nghị kiểm tra và hỗ trợ chuyển hàng lỗi về kho sớm nhất.`
-    ].filter(Boolean).join("\n");
-  } else {
-    return [
-      `✅ THÔNG BÁO: HÀNG ĐỔI LỖI ĐÃ VỀ KHO (${branchName.toUpperCase()})`,
-      `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-      `📞 SĐT KHÁCH: ${phone}`,
-      `👤 Tên khách hàng: ${custName}`,
-      `📦 Sản phẩm: ${prodName}`,
-      `⏰ Ngày tạo phiếu: ${createTime}`,
-      `👨‍💼 NV tạo phiếu: ${order.staffName}${order.staffCode ? ` (${order.staffCode})` : ""}`,
-      `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-      `✅ Thủ kho nhận: ${order.warehouseConfirmedBy || 'Đã nhận kho'}`,
-      `⏰ Thời gian nhận: ${order.warehouseDisplayTime || formatDateTime(order.warehouseTime)}`
-    ].filter(Boolean).join("\n");
-  }
+  const headerTitle = isReceived 
+    ? "✅ THÔNG BÁO: HÀNG ĐỔI LỖI ĐÃ VỀ KHO (SIÊU THỊ)" 
+    : "⚠️ THÔNG BÁO: HÀNG ĐỔI LỖI CHƯA VỀ KHO (SIÊU THỊ)";
+
+  return [
+    headerTitle,
+    "━━━━━━━━━━━━━━━━━━━━━━━━━━",
+    `📞 SĐT KHÁCH: ${phone}`,
+    `👤 Tên khách hàng: ${custName}`,
+    `📦 Sản phẩm: ${prodName}`
+  ].join("\n");
 }
 
 // Sao chép chuỗi văn bản vào Clipboard (tương thích mọi trình duyệt và fallback)
