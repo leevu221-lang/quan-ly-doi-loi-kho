@@ -43,14 +43,14 @@ function cleanBranchCode(raw) {
   s = s.toLowerCase().replace(/[^a-z0-9_-]/g, "");
 
   // 5. Kiểm tra nếu là kho mặc định
-  if (!s || s === "default" || s === "1" || s === "main" || s === "macdinh" || s === "mac-dinh") {
+  if (!s || s === "default" || s === "1" || s === "main" || s === "macdinh" || s === "mac-dinh" || s === "chinh" || s === "khochinh" || s === "kho-chinh") {
     return "default";
   }
 
   return s;
 }
 
-// Xác định Kho / Chi nhánh từ URL (?kho=...) hoặc bộ nhớ máy
+// Xác định Kho / Chi nhánh từ URL (?kho=...)
 function getActiveBranchId() {
   try {
     const params = new URLSearchParams(window.location.search);
@@ -60,14 +60,9 @@ function getActiveBranchId() {
       localStorage.setItem("dmx_active_branch", branch);
       return branch;
     }
-    const saved = localStorage.getItem("dmx_active_branch");
-    if (saved && saved.trim()) {
-      const cleaned = cleanBranchCode(saved);
-      if (cleaned !== saved) {
-        localStorage.setItem("dmx_active_branch", cleaned);
-      }
-      return cleaned;
-    }
+    // Nếu truy cập URL không có tham số ?kho= thì đây chính là KHO MẶC ĐỊNH (KHO CHÍNH)
+    localStorage.setItem("dmx_active_branch", "default");
+    return "default";
   } catch (e) {}
   return "default";
 }

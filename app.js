@@ -2263,7 +2263,22 @@ function initBranchSwitcher() {
     }
   } catch(e) {}
 
-  // Highlight shortcut pill tương ứng
+  // Hàm chuyển đổi kho an toàn và mượt mà
+  function switchToBranch(targetId) {
+    const clean = (typeof cleanBranchCode === "function") 
+      ? cleanBranchCode(targetId) 
+      : String(targetId).toLowerCase().replace(/[^a-z0-9_-]/g, "");
+
+    if (!clean || clean === "default") {
+      localStorage.setItem("dmx_active_branch", "default");
+      window.location.href = `${currentOrigin}${currentPath}`;
+    } else {
+      localStorage.setItem("dmx_active_branch", clean);
+      window.location.href = `${currentOrigin}${currentPath}?kho=${encodeURIComponent(clean)}`;
+    }
+  }
+
+  // Highlight & Gắn sự kiện click chuyển kho cho từng pill shortcut
   const pills = [
     { el: DOM.linkKhoDefault, id: "default" },
     { el: DOM.linkKho10528, id: "10528" },
@@ -2279,6 +2294,12 @@ function initBranchSwitcher() {
         p.el.style.background = "rgba(2, 132, 199, 0.12)";
         p.el.style.fontWeight = "700";
       }
+
+      // Xử lý chuyển kho ngay lập tức khi bấm vào nút lối tắt
+      p.el.addEventListener("click", (e) => {
+        e.preventDefault();
+        switchToBranch(p.id);
+      });
     }
   });
 
@@ -2323,7 +2344,7 @@ function initBranchSwitcher() {
     });
   }
 
-  // Điều hướng sang kho mới
+  // Điều hướng sang kho mới từ ô nhập
   function navigateToNewBranch() {
     const rawInput = DOM.inputNewBranchCode ? DOM.inputNewBranchCode.value.trim() : "";
     if (!rawInput) {
@@ -2331,18 +2352,7 @@ function initBranchSwitcher() {
       if (DOM.inputNewBranchCode) DOM.inputNewBranchCode.focus();
       return;
     }
-
-    const clean = (typeof cleanBranchCode === "function") 
-      ? cleanBranchCode(rawInput) 
-      : rawInput.toLowerCase().replace(/[^a-z0-9_-]/g, "");
-
-    if (!clean || clean === "default") {
-      localStorage.setItem("dmx_active_branch", "default");
-      window.location.href = `${currentOrigin}${currentPath}`;
-    } else {
-      localStorage.setItem("dmx_active_branch", clean);
-      window.location.href = `${currentOrigin}${currentPath}?kho=${encodeURIComponent(clean)}`;
-    }
+    switchToBranch(rawInput);
   }
 
   if (DOM.btnGoToBranch) {
