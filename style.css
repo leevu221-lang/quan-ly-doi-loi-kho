@@ -558,26 +558,11 @@ body.theme-dark .text-rose, body.theme-dark .text-danger { color: #f87171 !impor
 .text-success { color: #10b981 !important; }
 
 .kpi-warning {
-  border-left: 4px solid var(--warning);
+  border-left: 4px solid #ef4444;
 }
 
 .kpi-badge-pulse {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  background: var(--warning-light);
-  color: #b45309;
-  font-size: 10px;
-  font-weight: 800;
-  padding: 3px 8px;
-  border-radius: var(--radius-full);
-  text-transform: uppercase;
-  animation: pulseAmber 2s infinite;
-}
-@keyframes pulseAmber {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.06); }
-  100% { transform: scale(1); }
+  display: none !important;
 }
 
 /* ==============================================================================
@@ -2183,11 +2168,15 @@ body.theme-dark .print-wrapper {
     height: 18px;
   }
   .kpi-title {
-    font-size: 9.5px;
+    font-size: 10px;
+    font-weight: 700;
     letter-spacing: 0.2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .kpi-number {
-    font-size: 20px;
+    font-size: 21px;
     margin: 2px 0 0 0;
   }
   .kpi-desc {
