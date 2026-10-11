@@ -2612,11 +2612,6 @@ function renderOrdersTable() {
         <!-- Thao tác -->
         <td style="text-align: right;">
           <div class="row-actions">
-            <!-- Nút xem & in phiếu -->
-            <button type="button" class="btn-action btn-view-receipt" data-code="${escapeHtml(o.orderCode)}" title="Xem & In phiếu tiếp nhận đổi lỗi">
-              🖨️ In
-            </button>
-
             <!-- Nút sao chép thông tin gửi Zalo -->
             <button type="button" class="btn-action btn-copy-zalo" data-code="${escapeHtml(o.orderCode)}" title="Sao chép SĐT + Tên sản phẩm gửi Zalo">
               📋 Sao chép
@@ -2641,14 +2636,6 @@ function renderOrdersTable() {
   }).join("");
 
   // Attach row event listeners
-  DOM.ordersTableBody.querySelectorAll(".btn-view-receipt").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const code = btn.getAttribute("data-code");
-      const order = State.orders.find(o => o.orderCode === code);
-      if (order) openReceiptModal(order);
-    });
-  });
-
   DOM.ordersTableBody.querySelectorAll(".btn-copy-zalo").forEach(btn => {
     btn.addEventListener("click", () => {
       const code = btn.getAttribute("data-code");
