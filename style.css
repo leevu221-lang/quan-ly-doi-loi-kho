@@ -1096,7 +1096,8 @@ body.theme-dark tr.row-pending:hover {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 6px;
+  gap: 5px;
+  flex-wrap: wrap;
 }
 
 .btn-action {
@@ -1124,6 +1125,49 @@ body.theme-dark tr.row-pending:hover {
 }
 .btn-action.btn-wh-confirm:hover {
   background: #059669;
+}
+.btn-action.btn-copy-zalo {
+  background: rgba(2, 132, 199, 0.08);
+  color: #0284c7;
+  border-color: rgba(2, 132, 199, 0.3);
+  font-weight: 700;
+}
+.btn-action.btn-copy-zalo:hover {
+  background: #0284c7;
+  color: #fff;
+  border-color: #0284c7;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+}
+body.theme-dark .btn-action.btn-copy-zalo {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.35);
+}
+body.theme-dark .btn-action.btn-copy-zalo:hover {
+  background: #38bdf8;
+  color: #0f172a;
+}
+
+.btn-action.btn-export-image {
+  background: rgba(220, 38, 38, 0.08);
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.3);
+  font-weight: 700;
+}
+.btn-action.btn-export-image:hover {
+  background: #dc2626;
+  color: #fff;
+  border-color: #dc2626;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25);
+}
+body.theme-dark .btn-action.btn-export-image {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+body.theme-dark .btn-action.btn-export-image:hover {
+  background: #f87171;
+  color: #0f172a;
 }
 .btn-action.btn-delete {
   color: var(--danger);

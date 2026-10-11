@@ -30,8 +30,11 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
+  <!-- html2canvas (Chụp ảnh màn hình phiếu in & thông báo để gửi Zalo) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
   <!-- Main Stylesheet (Cache-busted) -->
-  <link rel="stylesheet" href="style.css?v=5.5">
+  <link rel="stylesheet" href="style.css?v=5.6">
 </head>
 <body class="theme-light">
 
@@ -339,7 +342,7 @@
               <th style="width: 165px;">Nhân viên nhận hàng lỗi</th>
               <th style="width: 130px;">Thời gian nhận</th>
               <th style="width: 125px; text-align: center;">Trạng thái kho</th>
-              <th style="width: 110px; text-align: right;">Thao tác</th>
+              <th style="width: 280px; min-width: 280px; text-align: right;">Thao tác</th>
             </tr>
           </thead>
           <tbody id="ordersTableBody">
@@ -762,9 +765,15 @@
             <p class="modal-subheading">Bản in gửi khách hàng và lưu trữ hồ sơ siêu thị</p>
           </div>
         </div>
-        <div class="action-btn-group">
+        <div class="action-btn-group" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+          <button type="button" class="btn btn-outline" id="btnReceiptCopyZalo" title="Sao chép nội dung SĐT & Sản phẩm gửi Zalo">
+            📋 Sao Chép Zalo
+          </button>
+          <button type="button" class="btn btn-outline" id="btnReceiptExportImage" title="Xuất ảnh phiếu in để gửi Zalo">
+            🖼️ Xuất Ảnh Phiếu
+          </button>
           <button type="button" class="btn btn-primary" id="btnPrintReceipt">
-            🖨️ In Phiếu Tiếp Nhận
+            🖨️ In Phiếu
           </button>
           <button class="btn-close-modal" id="btnCloseReceipt">✕</button>
         </div>
@@ -1002,6 +1011,44 @@
     </div>
   </div>
 
+  <!-- MODAL XEM & XUẤT ẢNH THÔNG BÁO ZALO -->
+  <div class="modal-overlay" id="modalImagePreview" style="display: none;">
+    <div class="modal-card modal-md">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon-badge" style="background: rgba(220, 38, 38, 0.1); color: #dc2626;">🖼️</div>
+          <div>
+            <h3 class="modal-heading">Ảnh Thông Báo Gửi Zalo</h3>
+            <p class="modal-subheading">Sẵn sàng tải về hoặc dán ngay vào tin nhắn Zalo</p>
+          </div>
+        </div>
+        <button class="btn-close-modal" id="btnCloseImagePreview">✕</button>
+      </div>
+
+      <div class="modal-body" style="text-align: center;">
+        <div id="imagePreviewContainer" style="margin-bottom: 16px; border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); background: #f8fafc; padding: 6px;">
+          <img id="previewImgElement" src="" alt="Ảnh thông báo chưa về kho" style="max-width: 100%; height: auto; display: block; border-radius: 6px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.08);" />
+        </div>
+
+        <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+          <button type="button" class="btn btn-primary" id="btnDownloadPreviewImage">
+            📥 Tải Ảnh Về Máy
+          </button>
+          <button type="button" class="btn btn-outline" id="btnCopyPreviewImage">
+            🖼️ Sao Chép Ảnh (Dán Zalo)
+          </button>
+          <button type="button" class="btn btn-outline" id="btnCopyPreviewText">
+            📋 Sao Chép Chữ
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" id="btnCloseImagePreviewFooter">Đóng</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Box -->
   <div class="toast-box" id="toastBox">
     <span class="toast-icon" id="toastIcon">✅</span>
@@ -1009,7 +1056,7 @@
   </div>
 
   <!-- Application Logic Scripts (Cache-busted) -->
-  <script src="firebase-config.js?v=5.5"></script>
-  <script src="app.js?v=5.5"></script>
+  <script src="firebase-config.js?v=5.6"></script>
+  <script src="app.js?v=5.6"></script>
 </body>
 </html>

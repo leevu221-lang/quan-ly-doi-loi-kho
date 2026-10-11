@@ -76,7 +76,13 @@ const State = {
 
   // Temporary selected product in modal
   selectedProduct: null,
-  activeOrderToConfirm: null
+  activeOrderToConfirm: null,
+
+  // Zalo notice & Receipt image export state
+  currentReceiptOrder: null,
+  currentPreviewImageBlob: null,
+  currentPreviewText: "",
+  currentPreviewFilename: "thong-bao-chua-ve-kho.png"
 };
 
 // DOM References Cache
@@ -240,6 +246,17 @@ function cacheDOMElements() {
   DOM.modalReceipt = document.getElementById("modalReceipt");
   DOM.btnCloseReceipt = document.getElementById("btnCloseReceipt");
   DOM.btnPrintReceipt = document.getElementById("btnPrintReceipt");
+  DOM.btnReceiptCopyZalo = document.getElementById("btnReceiptCopyZalo");
+  DOM.btnReceiptExportImage = document.getElementById("btnReceiptExportImage");
+
+  // Modal Preview & Xuất Ảnh Zalo
+  DOM.modalImagePreview = document.getElementById("modalImagePreview");
+  DOM.btnCloseImagePreview = document.getElementById("btnCloseImagePreview");
+  DOM.btnCloseImagePreviewFooter = document.getElementById("btnCloseImagePreviewFooter");
+  DOM.previewImgElement = document.getElementById("previewImgElement");
+  DOM.btnDownloadPreviewImage = document.getElementById("btnDownloadPreviewImage");
+  DOM.btnCopyPreviewImage = document.getElementById("btnCopyPreviewImage");
+  DOM.btnCopyPreviewText = document.getElementById("btnCopyPreviewText");
 
   // Modal Quản Lý Nhân Viên (Thêm / Sửa / Xóa)
   DOM.modalManageStaff = document.getElementById("modalManageStaff");
@@ -1448,6 +1465,7 @@ function downloadSampleExcel() {
 // ==============================================================================
 function openReceiptModal(order) {
   if (!order) return;
+  State.currentReceiptOrder = order;
 
   document.getElementById("printOrderCode").textContent = order.orderCode;
   document.getElementById("printOrderTime").textContent = order.displayTime || formatDateTime(order.createdAt);
@@ -1483,6 +1501,515 @@ function openReceiptModal(order) {
   }
 
   openModal(DOM.modalReceipt);
+}
+
+// ==============================================================================
+// 7.1. XUẤT ẢNH & SAO CHÉP THÔNG TIN GỬI ZALO (CHƯA VỀ KHO)
+// ==============================================================================
+
+// Định dạng tin nhắn Zalo chuẩn gồm SĐT, Tên sản phẩm, Mã đơn & Cảnh báo chưa về kho
+function formatZaloNoticeText(order) {
+  if (!order) return "";
+  const createTime = order.displayTime || formatDateTime(order.createdAt);
+  const custName = formatTitleCase(order.customerName) || "Khách lẻ";
+  const branchName = State.currentBranch ? `Kho ${State.currentBranch}` : "Siêu thị";
+  const phone = order.customerPhone || "Chưa có";
+  const prodName = order.productName || "Sản phẩm đổi lỗi";
+  const isReceived = (order.warehouseStatus === "DA_VE_KHO");
+
+  if (!isReceived) {
+    return [
+      `⚠️ THÔNG BÁO: HÀNG ĐỔI LỖI CHƯA VỀ KHO (${branchName.toUpperCase()})`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      `📞 SĐT KHÁCH: ${phone}`,
+      `👤 Tên khách hàng: ${custName}`,
+      `📦 Sản phẩm: ${prodName}`,
+      order.productCode && order.productCode !== "KHAC" ? `🏷️ Mã SP: ${order.productCode}` : null,
+      order.notes ? `📝 Ghi chú: ${order.notes}` : null,
+      `⏰ Ngày tạo phiếu: ${createTime}`,
+      `👨‍💼 NV tạo phiếu: ${order.staffName}${order.staffCode ? ` (${order.staffCode})` : ""}`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      `🚨 TÌNH TRẠNG: Sản phẩm này chưa được mang hàng lỗi về siêu thị!`,
+      `👉 Đề nghị kiểm tra và hỗ trợ chuyển hàng lỗi về kho sớm nhất.`
+    ].filter(Boolean).join("\n");
+  } else {
+    return [
+      `✅ THÔNG BÁO: HÀNG ĐỔI LỖI ĐÃ VỀ KHO (${branchName.toUpperCase()})`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      `📞 SĐT KHÁCH: ${phone}`,
+      `👤 Tên khách hàng: ${custName}`,
+      `📦 Sản phẩm: ${prodName}`,
+      `⏰ Ngày tạo phiếu: ${createTime}`,
+      `👨‍💼 NV tạo phiếu: ${order.staffName}${order.staffCode ? ` (${order.staffCode})` : ""}`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      `✅ Thủ kho nhận: ${order.warehouseConfirmedBy || 'Đã nhận kho'}`,
+      `⏰ Thời gian nhận: ${order.warehouseDisplayTime || formatDateTime(order.warehouseTime)}`
+    ].filter(Boolean).join("\n");
+  }
+}
+
+// Sao chép chuỗi văn bản vào Clipboard (tương thích mọi trình duyệt và fallback)
+async function copyToClipboard(text) {
+  if (!text) return false;
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (err) {
+    console.warn("navigator.clipboard.writeText failed:", err);
+  }
+
+  try {
+    const el = document.createElement("textarea");
+    el.value = text;
+    el.setAttribute("readonly", "");
+    el.style.position = "fixed";
+    el.style.left = "-9999px";
+    el.style.top = "0";
+    document.body.appendChild(el);
+    el.select();
+    const success = document.execCommand("copy");
+    document.body.removeChild(el);
+    return success;
+  } catch (e) {
+    console.warn("document.execCommand fallback copy failed:", e);
+    return false;
+  }
+}
+
+// Sao chép hình ảnh trực tiếp vào Clipboard (hỗ trợ dán Ctrl+V ngay vào Zalo chat)
+async function copyImageBlobToClipboard(blob) {
+  if (!blob) return false;
+  try {
+    if (navigator.clipboard && typeof window.ClipboardItem !== "undefined") {
+      const item = new ClipboardItem({ "image/png": blob });
+      await navigator.clipboard.write([item]);
+      return true;
+    }
+  } catch (err) {
+    console.warn("copyImageBlobToClipboard error:", err);
+  }
+  return false;
+}
+
+// Thao tác sao chép nhanh thông báo gửi Zalo từ bảng hoặc modal
+async function copyZaloNotice(orderCode) {
+  const order = State.orders.find(o => o.orderCode === orderCode);
+  if (!order) {
+    showToast("Không tìm thấy thông tin đơn hàng!", "error");
+    return;
+  }
+  const text = formatZaloNoticeText(order);
+  const ok = await copyToClipboard(text);
+  if (ok) {
+    showToast(`Đã sao chép SĐT & SP (${order.customerPhone}) gửi Zalo!`, "success");
+  } else {
+    prompt("Sao chép nội dung gửi Zalo:", text);
+  }
+}
+
+// Helper ngắt dòng chữ tự động cho Canvas HTML5
+function calculateWrappedLines(ctx, text, maxWidth) {
+  if (!text) return [""];
+  const words = String(text).trim().split(/\s+/);
+  const lines = [];
+  let currentLine = "";
+
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    const testWidth = ctx.measureText(testLine).width;
+
+    if (testWidth > maxWidth && currentLine) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = testLine;
+    }
+  }
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+  return lines.length ? lines : [""];
+}
+
+// Helper vẽ góc bo tròn cho Canvas
+function drawRoundedRect(ctx, x, y, width, height, radius, fill, stroke) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+  if (fill) ctx.fill();
+  if (stroke) ctx.stroke();
+}
+
+// Tạo Canvas đồ họa thẻ thông báo Zalo chuẩn nét cao (Retina 2x)
+function createZaloNoticeCanvas(order) {
+  if (!order) return null;
+  const scale = 2; // Độ phân giải 2x cực nét
+  const width = 720;
+  
+  // Đoạn đo đạc kích thước động
+  const measureCanvas = document.createElement("canvas");
+  const mCtx = measureCanvas.getContext("2d");
+  
+  const custName = formatTitleCase(order.customerName) || "Khách lẻ";
+  const phone = order.customerPhone || "Chưa có";
+  const prodName = order.productName || "Sản phẩm đổi lỗi";
+  const prodCode = (order.productCode && order.productCode !== "KHAC") ? order.productCode : "";
+  const notes = order.notes || "(Không có ghi chú)";
+  const createTime = order.displayTime || formatDateTime(order.createdAt);
+  const staff = `${order.staffName || "Nhân viên"}${order.staffCode ? ` (${order.staffCode})` : ""}`;
+  const branchName = State.currentBranch ? `Kho ${State.currentBranch}` : "Siêu thị";
+  const isReceived = (order.warehouseStatus === "DA_VE_KHO");
+
+  mCtx.font = "bold 18px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+  const prodLines = calculateWrappedLines(mCtx, prodName, 460);
+  
+  mCtx.font = "15px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+  const noteLines = calculateWrappedLines(mCtx, notes, 460);
+
+  // Tính chiều cao tổng thể linh hoạt
+  const baseDetailsHeight = 150 + (prodLines.length * 26) + (noteLines.length * 24);
+  const totalHeight = 100 + 52 + 50 + baseDetailsHeight + 120 + 44;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width * scale;
+  canvas.height = totalHeight * scale;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(scale, scale);
+
+  // Nền trắng tổng thể
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, width, totalHeight);
+
+  // 1. Header Thương Hiệu Xanh Điện Máy Xanh
+  const headerGrad = ctx.createLinearGradient(0, 0, width, 0);
+  headerGrad.addColorStop(0, "#0071ba");
+  headerGrad.addColorStop(1, "#0284c7");
+  ctx.fillStyle = headerGrad;
+  ctx.fillRect(0, 0, width, 100);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "900 22px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+  ctx.fillText("HỆ THỐNG QUẢN LÝ ĐỔI LỖI", 36, 42);
+
+  ctx.font = "700 14px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+  ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
+  ctx.fillText(`🏢 ${branchName.toUpperCase()} • ĐIỆN MÁY XANH`, 36, 72);
+
+  // Thời gian xuất ảnh góc phải
+  const nowStr = formatDateTime(new Date().toISOString());
+  ctx.font = "500 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+  ctx.textAlign = "right";
+  ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+  ctx.fillText(`Xuất ảnh: ${nowStr}`, width - 36, 42);
+  ctx.textAlign = "left";
+
+  // 2. Banner Cảnh Báo Chưa Về Kho (Màu đỏ nổi bật)
+  let curY = 100;
+  if (!isReceived) {
+    ctx.fillStyle = "#dc2626";
+    ctx.fillRect(0, curY, width, 52);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "900 16px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("⚠️ CẢNH BÁO: SẢN PHẨM CHƯA ĐƯỢC MANG HÀNG LỖI VỀ SIÊU THỊ ⚠️", width / 2, curY + 33);
+    ctx.textAlign = "left";
+  } else {
+    ctx.fillStyle = "#059669";
+    ctx.fillRect(0, curY, width, 52);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "900 16px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("✅ HÀNG ĐỔI LỖI ĐÃ ĐƯỢC NHẬN VỀ KHO SIÊU THỊ", width / 2, curY + 33);
+    ctx.textAlign = "left";
+  }
+  curY += 52;
+
+  // 3. Thanh Mã Phiếu & Ngày Tạo
+  ctx.fillStyle = "#f8fafc";
+  ctx.fillRect(0, curY, width, 50);
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(0, curY, width, 50);
+
+  ctx.font = "700 14px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+  ctx.fillStyle = "#475569";
+  ctx.fillText("MÃ PHIẾU:", 36, curY + 31);
+
+  ctx.font = "900 18px monospace, Courier, sans-serif";
+  ctx.fillStyle = "#0284c7";
+  ctx.fillText(order.orderCode, 130, curY + 31);
+
+  ctx.font = "600 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+  ctx.fillStyle = "#64748b";
+  ctx.textAlign = "right";
+  ctx.fillText(`Ngày tạo: ${createTime}`, width - 36, curY + 31);
+  ctx.textAlign = "left";
+
+  curY += 50;
+
+  // 4. Chi Tiết Khách Hàng & Sản Phẩm
+  const drawRow = (label, value, fontStyle = "600 15px", textColor = "#1e293b", isHighlight = false) => {
+    ctx.font = "700 14px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.fillStyle = "#64748b";
+    ctx.fillText(label, 36, curY);
+
+    if (isHighlight) {
+      ctx.font = fontStyle;
+      const textWidth = ctx.measureText(value).width;
+      ctx.fillStyle = "rgba(2, 132, 199, 0.1)";
+      drawRoundedRect(ctx, 215, curY - 22, textWidth + 20, 30, 4, true, false);
+      ctx.fillStyle = textColor;
+      ctx.fillText(value, 225, curY);
+    } else {
+      ctx.font = fontStyle;
+      ctx.fillStyle = textColor;
+      ctx.fillText(value, 225, curY);
+    }
+    curY += 34;
+  };
+
+  curY += 30;
+  // SĐT Khách Hàng Nổi Bật To Rõ
+  drawRow("📞 SỐ ĐIỆN THOẠI:", phone, "900 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", "#0284c7", true);
+  
+  // Tên Khách Hàng
+  drawRow("👤 Khách hàng:", custName, "700 16px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", "#0f172a");
+
+  // Tên Sản Phẩm Đổi Lỗi
+  ctx.font = "700 14px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+  ctx.fillStyle = "#64748b";
+  ctx.fillText("📦 Sản phẩm lỗi:", 36, curY);
+
+  ctx.font = "bold 16px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+  ctx.fillStyle = "#0f172a";
+  prodLines.forEach((line, i) => {
+    ctx.fillText(line, 225, curY + (i * 24));
+  });
+  curY += (prodLines.length * 24) + 8;
+
+  // Mã sản phẩm
+  if (prodCode) {
+    drawRow("🏷️ Mã sản phẩm:", prodCode, "700 14px monospace, Courier, sans-serif", "#475569");
+  }
+
+  // Ghi chú lỗi
+  ctx.font = "700 14px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+  ctx.fillStyle = "#64748b";
+  ctx.fillText("📝 Ghi chú lỗi:", 36, curY);
+
+  ctx.font = "500 14px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+  ctx.fillStyle = "#334155";
+  noteLines.forEach((line, i) => {
+    ctx.fillText(line, 225, curY + (i * 22));
+  });
+  curY += (noteLines.length * 22) + 10;
+
+  // Nhân viên tiếp nhận
+  drawRow("👨‍💼 NV tiếp nhận:", staff, "600 14px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", "#334155");
+
+  curY += 8;
+
+  // 5. Hộp Nhắc Nhở Gửi Zalo Lớn (Alert Callout Box)
+  const boxX = 36;
+  const boxWidth = width - 72;
+  const boxHeight = 100;
+  
+  if (!isReceived) {
+    ctx.fillStyle = "#fef2f2";
+    drawRoundedRect(ctx, boxX, curY, boxWidth, boxHeight, 8, true, false);
+    ctx.strokeStyle = "#dc2626";
+    ctx.lineWidth = 1.5;
+    drawRoundedRect(ctx, boxX, curY, boxWidth, boxHeight, 8, false, true);
+
+    ctx.fillStyle = "#991b1b";
+    ctx.font = "900 15px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.fillText("🚨 LƯU Ý QUAN TRỌNG GỬI ZALO:", boxX + 20, curY + 28);
+
+    ctx.fillStyle = "#dc2626";
+    ctx.font = "700 15px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.fillText("SẢN PHẨM NÀY CHƯA ĐƯỢC MANG HÀNG LỖI VỀ SIÊU THỊ!", boxX + 20, curY + 56);
+
+    ctx.fillStyle = "#4b5563";
+    ctx.font = "500 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.fillText("👉 Vui lòng liên hệ khách hoặc kiểm tra quầy để chuyển hàng lỗi về kho gấp.", boxX + 20, curY + 82);
+  } else {
+    ctx.fillStyle = "#f0fdf4";
+    drawRoundedRect(ctx, boxX, curY, boxWidth, boxHeight, 8, true, false);
+    ctx.strokeStyle = "#16a34a";
+    ctx.lineWidth = 1.5;
+    drawRoundedRect(ctx, boxX, curY, boxWidth, boxHeight, 8, false, true);
+
+    ctx.fillStyle = "#166534";
+    ctx.font = "900 15px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.fillText("✅ TRẠNG THÁI: ĐÃ VỀ KHO SIÊU THỊ", boxX + 20, curY + 30);
+
+    ctx.fillStyle = "#15803d";
+    ctx.font = "600 14px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.fillText(`Thủ kho đã nhận: ${order.warehouseConfirmedBy || 'Đã nhận'}`, boxX + 20, curY + 58);
+    ctx.fillText(`Thời gian nhận: ${order.warehouseDisplayTime || formatDateTime(order.warehouseTime)}`, boxX + 20, curY + 82);
+  }
+
+  // 6. Chân Thẻ Watermark
+  ctx.fillStyle = "#f1f5f9";
+  ctx.fillRect(0, totalHeight - 44, width, 44);
+
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("HỆ THỐNG ĐỔI LỖI SIÊU THỊ • TỰ ĐỘNG XUẤT ẢNH GỬI ZALO", width / 2, totalHeight - 17);
+  ctx.textAlign = "left";
+
+  return canvas;
+}
+
+// Xuất ảnh thông báo Zalo dạng Card đồ họa
+async function exportZaloNoticeImage(orderCode) {
+  const order = State.orders.find(o => o.orderCode === orderCode);
+  if (!order) {
+    showToast("Không tìm thấy thông tin đơn hàng!", "error");
+    return;
+  }
+  showToast("Đang tạo ảnh thông báo gửi Zalo...", "info");
+  
+  const canvas = createZaloNoticeCanvas(order);
+  if (!canvas) {
+    showToast("Không thể tạo ảnh thông báo!", "error");
+    return;
+  }
+
+  canvas.toBlob(async blob => {
+    if (!blob) {
+      showToast("Lỗi xử lý hình ảnh!", "error");
+      return;
+    }
+    State.currentPreviewImageBlob = blob;
+    State.currentPreviewFilename = `Thong-bao-chua-ve-kho-${order.orderCode}-${order.customerPhone || 'khach'}.png`;
+    State.currentPreviewText = formatZaloNoticeText(order);
+
+    const dataUrl = canvas.toDataURL("image/png");
+    DOM.previewImgElement.src = dataUrl;
+    openModal(DOM.modalImagePreview);
+
+    // Tự động sao chép ảnh vào Clipboard để người dùng dán (Ctrl+V) ngay vào Zalo
+    const copiedImage = await copyImageBlobToClipboard(blob);
+    if (copiedImage) {
+      showToast("Đã sao chép ảnh! Bạn có thể dán (Ctrl+V) ngay vào Zalo.", "success");
+    } else {
+      showToast("Đã tạo ảnh thành công! Bấm 'Tải Ảnh' hoặc 'Sao chép' bên dưới.", "success");
+    }
+  }, "image/png");
+}
+
+// Xuất ảnh chụp trực tiếp từ Phiếu Tiếp Nhận (In Phiếu)
+async function exportReceiptSlipImage() {
+  if (!State.currentReceiptOrder) {
+    showToast("Không tìm thấy phiếu để xuất ảnh!", "error");
+    return;
+  }
+  const printArea = document.getElementById("receiptPrintArea");
+  if (!printArea) return;
+
+  showToast("Đang kết xuất ảnh phiếu tiếp nhận...", "info");
+  try {
+    if (typeof html2canvas === "function") {
+      const canvas = await html2canvas(printArea, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        logging: false,
+        useCORS: true
+      });
+      canvas.toBlob(async blob => {
+        if (!blob) {
+          showToast("Không thể xuất ảnh từ phiếu in!", "error");
+          return;
+        }
+        State.currentPreviewImageBlob = blob;
+        State.currentPreviewFilename = `Phieu-tiep-nhan-${State.currentReceiptOrder.orderCode}.png`;
+        State.currentPreviewText = formatZaloNoticeText(State.currentReceiptOrder);
+        const url = URL.createObjectURL(blob);
+        DOM.previewImgElement.src = url;
+        openModal(DOM.modalImagePreview);
+
+        const copied = await copyImageBlobToClipboard(blob);
+        if (copied) {
+          showToast("Đã sao chép ảnh phiếu! Bạn có thể dán (Ctrl+V) vào Zalo.", "success");
+        } else {
+          showToast("Đã tạo ảnh phiếu thành công!", "success");
+        }
+      }, "image/png");
+    } else {
+      exportZaloNoticeImage(State.currentReceiptOrder.orderCode);
+    }
+  } catch (err) {
+    console.error("html2canvas error:", err);
+    exportZaloNoticeImage(State.currentReceiptOrder.orderCode);
+  }
+}
+
+// Tải ảnh xem trước về máy
+function downloadPreviewImage() {
+  if (!State.currentPreviewImageBlob && !DOM.previewImgElement.src) {
+    showToast("Không có ảnh để tải về!", "error");
+    return;
+  }
+  const filename = State.currentPreviewFilename || "thong-bao-chua-ve-kho.png";
+  if (State.currentPreviewImageBlob) {
+    const url = URL.createObjectURL(State.currentPreviewImageBlob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } else {
+    const link = document.createElement("a");
+    link.href = DOM.previewImgElement.src;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+  showToast("Đang tải ảnh về máy...", "success");
+}
+
+// Sao chép ảnh xem trước vào clipboard
+async function copyPreviewImageToClipboard() {
+  if (!State.currentPreviewImageBlob) {
+    showToast("Không có dữ liệu ảnh để sao chép!", "error");
+    return;
+  }
+  const ok = await copyImageBlobToClipboard(State.currentPreviewImageBlob);
+  if (ok) {
+    showToast("Đã sao chép ảnh! Bạn có thể dán (Ctrl+V) trực tiếp vào Zalo.", "success");
+  } else {
+    showToast("Trình duyệt không hỗ trợ sao chép ảnh trực tiếp, vui lòng bấm 'Tải Ảnh Về Máy'!", "warning");
+  }
+}
+
+// Sao chép nội dung văn bản xem trước vào clipboard
+async function copyPreviewTextToClipboard() {
+  if (!State.currentPreviewText) {
+    showToast("Không có nội dung văn bản!", "error");
+    return;
+  }
+  const ok = await copyToClipboard(State.currentPreviewText);
+  if (ok) {
+    showToast("Đã sao chép nội dung văn bản gửi Zalo!", "success");
+  } else {
+    prompt("Sao chép nội dung gửi Zalo:", State.currentPreviewText);
+  }
 }
 
 // ==============================================================================
@@ -1755,6 +2282,16 @@ function renderOrdersTable() {
               🖨️ In
             </button>
 
+            <!-- Nút sao chép thông tin gửi Zalo -->
+            <button type="button" class="btn-action btn-copy-zalo" data-code="${escapeHtml(o.orderCode)}" title="Sao chép SĐT + Tên sản phẩm gửi Zalo (chưa về kho)">
+              📋 Sao chép
+            </button>
+
+            <!-- Nút xuất ảnh gửi Zalo -->
+            <button type="button" class="btn-action btn-export-image" data-code="${escapeHtml(o.orderCode)}" title="Xuất ảnh thông báo chưa về kho gửi Zalo">
+              🖼️ Xuất ảnh
+            </button>
+
             <!-- Nút xác nhận về kho nếu chưa về kho -->
             ${!isReceived 
               ? `<button type="button" class="btn-action btn-wh-confirm" data-code="${escapeHtml(o.orderCode)}" title="Xác nhận hàng đã về kho">
@@ -1779,6 +2316,20 @@ function renderOrdersTable() {
       const code = btn.getAttribute("data-code");
       const order = State.orders.find(o => o.orderCode === code);
       if (order) openReceiptModal(order);
+    });
+  });
+
+  DOM.ordersTableBody.querySelectorAll(".btn-copy-zalo").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const code = btn.getAttribute("data-code");
+      copyZaloNotice(code);
+    });
+  });
+
+  DOM.ordersTableBody.querySelectorAll(".btn-export-image").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const code = btn.getAttribute("data-code");
+      exportZaloNoticeImage(code);
     });
   });
 
@@ -2018,6 +2569,37 @@ function setupEventListeners() {
   DOM.btnPrintReceipt.addEventListener("click", () => {
     window.print();
   });
+  if (DOM.btnReceiptCopyZalo) {
+    DOM.btnReceiptCopyZalo.addEventListener("click", () => {
+      if (State.currentReceiptOrder) {
+        copyZaloNotice(State.currentReceiptOrder.orderCode);
+      } else {
+        showToast("Không tìm thấy thông tin phiếu tiếp nhận!", "warning");
+      }
+    });
+  }
+  if (DOM.btnReceiptExportImage) {
+    DOM.btnReceiptExportImage.addEventListener("click", () => {
+      exportReceiptSlipImage();
+    });
+  }
+
+  // Modal Image Preview triggers
+  if (DOM.btnCloseImagePreview) {
+    DOM.btnCloseImagePreview.addEventListener("click", () => closeModal(DOM.modalImagePreview));
+  }
+  if (DOM.btnCloseImagePreviewFooter) {
+    DOM.btnCloseImagePreviewFooter.addEventListener("click", () => closeModal(DOM.modalImagePreview));
+  }
+  if (DOM.btnDownloadPreviewImage) {
+    DOM.btnDownloadPreviewImage.addEventListener("click", downloadPreviewImage);
+  }
+  if (DOM.btnCopyPreviewImage) {
+    DOM.btnCopyPreviewImage.addEventListener("click", copyPreviewImageToClipboard);
+  }
+  if (DOM.btnCopyPreviewText) {
+    DOM.btnCopyPreviewText.addEventListener("click", copyPreviewTextToClipboard);
+  }
 
   // Export orders to Excel
   DOM.btnExportOrdersExcel.addEventListener("click", exportOrdersToExcel);
