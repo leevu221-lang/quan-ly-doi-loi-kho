@@ -31,7 +31,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <!-- Main Stylesheet (Cache-busted) -->
-  <link rel="stylesheet" href="style.css?v=5.0">
+  <link rel="stylesheet" href="style.css?v=5.1">
 </head>
 <body class="theme-light">
 
@@ -54,9 +54,9 @@
           <div class="badge-mini">DỊCH VỤ KHÁCH HÀNG & KHO SIÊU THỊ</div>
           <div class="brand-title-wrap">
             <h1 class="brand-title">Quản Lý Nhập Đổi Lỗi & Kho</h1>
-            <button type="button" class="branch-pill-badge" id="btnBranchSwitcher" title="Bấm để xem link chia sẻ hoặc chuyển đổi kho">
+            <button type="button" class="branch-pill-badge" id="btnBranchSwitcher" title="Kho dữ liệu đang hoạt động">
               <span id="currentBranchLabel">🏪 Kho: Mặc định</span>
-              <span style="font-size: 10px; opacity: 0.7;">▾</span>
+              <span class="branch-arrow" style="font-size: 10px; opacity: 0.7;">▾</span>
             </button>
           </div>
         </div>
@@ -123,6 +123,13 @@
               <div>
                 <strong>Quản lý nhân viên</strong>
                 <p>Thêm, sửa, xóa danh sách nhân viên</p>
+              </div>
+            </button>
+            <button class="dropdown-item admin-only-item" id="btnMenuBranchSwitcher">
+              <span class="item-icon">🏪</span>
+              <div>
+                <strong>Nhân bản & Quản lý kho</strong>
+                <p>Chuyển đổi hoặc cấp link kho mới (Chỉ Admin)</p>
               </div>
             </button>
             <div class="dropdown-divider" id="dropdownDividerLogout" style="display: none;"></div>
@@ -251,6 +258,15 @@
               <line x1="12" y1="15" x2="12" y2="3"></line>
             </svg>
             <span>Xuất Excel Đơn</span>
+          </button>
+
+          <!-- Button Quản Lý & Nhân Bản Kho (Chỉ Admin) -->
+          <button type="button" class="btn btn-outline admin-only-btn" id="btnOpenBranchModalToolbar" title="Nhân bản & Chia sẻ kho hàng độc lập (Chỉ Admin)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon text-primary">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+            <span>🏪 Quản Lý & Đổi Kho</span>
           </button>
 
           <!-- Button Xóa Toàn Bộ Danh Sách Đơn (Chỉ Admin) -->
@@ -927,7 +943,10 @@
         <div class="modal-title-group">
           <div class="modal-icon-badge" style="background: rgba(2, 132, 199, 0.1); color: var(--primary);">🏪</div>
           <div>
-            <h3 class="modal-heading">Nhân Bản & Chia Sẻ Kho Hàng</h3>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <h3 class="modal-heading">Nhân Bản & Chia Sẻ Kho Hàng</h3>
+              <span class="badge" style="background: rgba(2, 132, 199, 0.12); color: var(--primary); font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(2, 132, 199, 0.25);">🛡️ Chỉ Admin</span>
+            </div>
             <p class="modal-subheading">Tách dữ liệu đơn hàng và nhân viên hoàn toàn độc lập cho người khác sử dụng</p>
           </div>
         </div>
@@ -991,7 +1010,7 @@
   </div>
 
   <!-- Application Logic Scripts (Cache-busted) -->
-  <script src="firebase-config.js?v=5.0"></script>
-  <script src="app.js?v=5.0"></script>
+  <script src="firebase-config.js?v=5.1"></script>
+  <script src="app.js?v=5.1"></script>
 </body>
 </html>

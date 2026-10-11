@@ -129,6 +129,8 @@ function cacheDOMElements() {
   DOM.linkKho2 = document.getElementById("linkKho2");
   DOM.linkKho3 = document.getElementById("linkKho3");
   DOM.linkKhoShopB = document.getElementById("linkKhoShopB");
+  DOM.btnOpenBranchModalToolbar = document.getElementById("btnOpenBranchModalToolbar");
+  DOM.btnMenuBranchSwitcher = document.getElementById("btnMenuBranchSwitcher");
   
   // User Auth & Header
   DOM.userAuthWrap = document.querySelector(".user-auth-wrap");
@@ -389,6 +391,14 @@ function updateUserBadgeUI() {
     DOM.dropdownDividerLogout.style.display = "none";
     document.body.classList.remove("is-admin");
   }
+
+  if (DOM.btnBranchSwitcher) {
+    if (u.role === "admin") {
+      DOM.btnBranchSwitcher.setAttribute("title", "Quản trị viên: Bấm để quản lý, nhân bản hoặc chuyển đổi kho");
+    } else {
+      DOM.btnBranchSwitcher.setAttribute("title", "Kho dữ liệu đang hoạt động");
+    }
+  }
 }
 
 // Lấy thông tin nhân viên đăng nhập thực tế (không lấy tài khoản Admin)
@@ -452,6 +462,9 @@ function loginAsStaff(staff) {
     DOM.modalLoginStaff.classList.remove("is-gate");
     closeModal(DOM.modalLoginStaff);
   }
+  if (DOM.modalBranchSwitcher) {
+    closeModal(DOM.modalBranchSwitcher);
+  }
   DOM.userDropdownMenu.style.display = "none";
   playSuccessSound();
   showToast(`👋 Chào bạn, ${staff.name} (${staff.code})! Đăng nhập thành công.`, "success");
@@ -478,6 +491,9 @@ function logout() {
   State.currentUser = { role: "guest", code: "", name: "" };
   updateUserBadgeUI();
   DOM.userDropdownMenu.style.display = "none";
+  if (DOM.modalBranchSwitcher) {
+    closeModal(DOM.modalBranchSwitcher);
+  }
   showToast("Đã đăng xuất tài khoản", "info");
   showStaffSelectionGate();
 }
@@ -2303,10 +2319,38 @@ function initBranchSwitcher() {
     }
   });
 
-  // Mở modal khi bấm badge kho ở header
-  DOM.btnBranchSwitcher.addEventListener("click", () => {
+  // Hàm mở modal chia sẻ & chuyển đổi kho - BẢO VỆ PHÂN QUYỀN CHỈ ADMIN
+  function openBranchSwitcherModal() {
+    if (!State.currentUser || State.currentUser.role !== "admin") {
+      showToast("🔒 Chỉ Quản trị viên (Admin) mới có quyền nhân bản & quản lý kho hàng!", "warning");
+      if (DOM.modalLoginAdmin) {
+        openModal(DOM.modalLoginAdmin);
+        if (DOM.adminPasswordInput) DOM.adminPasswordInput.focus();
+      }
+      return;
+    }
     openModal(DOM.modalBranchSwitcher);
+  }
+
+  // Mở modal khi bấm badge kho ở header (chỉ cho phép khi là Admin)
+  DOM.btnBranchSwitcher.addEventListener("click", () => {
+    openBranchSwitcherModal();
   });
+
+  // Mở modal từ nút thanh công cụ (Toolbar)
+  if (DOM.btnOpenBranchModalToolbar) {
+    DOM.btnOpenBranchModalToolbar.addEventListener("click", () => {
+      openBranchSwitcherModal();
+    });
+  }
+
+  // Mở modal từ menu dropdown cá nhân
+  if (DOM.btnMenuBranchSwitcher) {
+    DOM.btnMenuBranchSwitcher.addEventListener("click", () => {
+      DOM.userDropdownMenu.style.display = "none";
+      openBranchSwitcherModal();
+    });
+  }
 
   // Đóng modal
   if (DOM.btnCloseBranchModal) {
