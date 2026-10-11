@@ -485,6 +485,24 @@ function loginAsAdmin() {
   DOM.userDropdownMenu.style.display = "none";
   playSuccessSound();
   showToast("🛡️ Đăng nhập quyền Quản trị viên (Admin) thành công!", "success");
+
+  // Tự động mở chức năng tiếp theo:
+  // Mặc định hoặc khi kích hoạt từ kho -> TỰ ĐỘNG HIỆN POPUP NHÂN BẢN & CHIA SẺ KHO (Hình 1)
+  const pending = window.pendingAdminAction || "openBranchSwitcher";
+  window.pendingAdminAction = null;
+
+  setTimeout(() => {
+    if (pending === "openManageStaff") {
+      if (typeof openManageStaffModal === "function") openManageStaffModal();
+    } else if (pending === "openExcelProducts") {
+      if (typeof openExcelProductsModal === "function") openExcelProductsModal();
+    } else {
+      // Mở modal Nhân bản & Chia sẻ kho hàng (Hình 1)
+      if (DOM.modalBranchSwitcher) {
+        openModal(DOM.modalBranchSwitcher);
+      }
+    }
+  }, 180);
 }
 
 function logout() {
@@ -603,6 +621,7 @@ function handleStaffSearchAutocomplete(query) {
 // ==============================================================================
 function openManageStaffModal() {
   if (State.currentUser.role !== "admin") {
+    window.pendingAdminAction = "openManageStaff";
     showToast("Chức năng Quản lý Nhân viên chỉ dành cho Quản trị viên (Admin)!", "warning");
     openModal(DOM.modalLoginAdmin);
     return;
@@ -1243,6 +1262,7 @@ let tempParsedExcelProducts = [];
 
 function openExcelProductsModal() {
   if (State.currentUser.role !== "admin") {
+    window.pendingAdminAction = "openExcelProducts";
     showToast("Tính năng nạp Excel sản phẩm chỉ dành cho Quản trị viên (Admin)!", "warning");
     openModal(DOM.modalLoginAdmin);
     return;
@@ -2071,6 +2091,7 @@ function setupEventListeners() {
   });
 
   DOM.btnCloseAdminLogin.addEventListener("click", () => {
+    window.pendingAdminAction = null;
     closeModal(DOM.modalLoginAdmin);
     if (State.currentUser.role === "guest") {
       openModal(DOM.modalLoginStaff);
@@ -2078,6 +2099,7 @@ function setupEventListeners() {
   });
 
   DOM.btnCancelAdminLogin.addEventListener("click", () => {
+    window.pendingAdminAction = null;
     closeModal(DOM.modalLoginAdmin);
     if (State.currentUser.role === "guest") {
       openModal(DOM.modalLoginStaff);
@@ -2322,8 +2344,10 @@ function initBranchSwitcher() {
   // Hàm mở modal chia sẻ & chuyển đổi kho - BẢO VỆ PHÂN QUYỀN CHỈ ADMIN
   function openBranchSwitcherModal() {
     if (!State.currentUser || State.currentUser.role !== "admin") {
-      showToast("🔒 Chỉ Quản trị viên (Admin) mới có quyền nhân bản & quản lý kho hàng!", "warning");
+      window.pendingAdminAction = "openBranchSwitcher";
+      showToast("🔒 Vui lòng nhập mật khẩu Admin để mở Quản lý & Nhân bản kho!", "info");
       if (DOM.modalLoginAdmin) {
+        if (DOM.adminPasswordInput) DOM.adminPasswordInput.value = "";
         openModal(DOM.modalLoginAdmin);
         if (DOM.adminPasswordInput) DOM.adminPasswordInput.focus();
       }
