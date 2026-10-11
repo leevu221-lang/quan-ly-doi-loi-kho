@@ -34,7 +34,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <!-- Main Stylesheet (Cache-busted) -->
-  <link rel="stylesheet" href="style.css?v=5.7">
+  <link rel="stylesheet" href="style.css?v=5.8">
 </head>
 <body class="theme-light">
 
@@ -230,6 +230,18 @@
             <span>Nhập Đổi Lỗi Mới</span>
           </button>
 
+          <!-- Button Xuất Ảnh Toàn Bộ Chưa Về Kho -->
+          <button type="button" class="btn btn-export-all-img" id="btnExportAllImage" title="Xuất ảnh toàn bộ danh sách sản phẩm chưa về kho để gửi Zalo">
+            <span style="font-size: 15px;">🖼️</span>
+            <span>Xuất Ảnh Chưa Về Kho (All)</span>
+          </button>
+
+          <!-- Button Sao Chép Toàn Bộ Chưa Về Kho -->
+          <button type="button" class="btn btn-copy-all-zalo" id="btnCopyAllZalo" title="Sao chép toàn bộ danh sách SĐT & Sản phẩm chưa về kho gửi Zalo">
+            <span style="font-size: 15px;">📋</span>
+            <span>Sao Chép All Zalo</span>
+          </button>
+
           <!-- Button Quản lý Nhân Viên (Thêm, Sửa, Xóa - Chỉ Admin) -->
           <button type="button" class="btn btn-outline admin-only-btn" id="btnOpenManageStaffModal" title="Thêm mới, sửa hoặc xóa nhân viên tiếp nhận (Chỉ Admin)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon text-primary">
@@ -342,7 +354,14 @@
               <th style="width: 165px;">Nhân viên nhận hàng lỗi</th>
               <th style="width: 130px;">Thời gian nhận</th>
               <th style="width: 125px; text-align: center;">Trạng thái kho</th>
-              <th style="width: 280px; min-width: 280px; text-align: right;">Thao tác</th>
+              <th style="width: 200px; text-align: right;">
+                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 6px;">
+                  <span>Thao tác</span>
+                  <button type="button" class="btn-action btn-header-export-all" id="btnHeaderExportAll" title="Xuất ảnh toàn bộ đơn chưa về kho gửi Zalo">
+                    🖼️ Xuất all
+                  </button>
+                </div>
+              </th>
             </tr>
           </thead>
           <tbody id="ordersTableBody">
@@ -1056,7 +1075,7 @@
   </div>
 
   <!-- Application Logic Scripts (Cache-busted) -->
-  <script src="firebase-config.js?v=5.7"></script>
-  <script src="app.js?v=5.7"></script>
+  <script src="firebase-config.js?v=5.8"></script>
+  <script src="app.js?v=5.8"></script>
 </body>
 </html>
