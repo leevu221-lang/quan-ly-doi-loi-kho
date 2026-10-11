@@ -31,7 +31,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <!-- Main Stylesheet (Cache-busted) -->
-  <link rel="stylesheet" href="style.css?v=4.8">
+  <link rel="stylesheet" href="style.css?v=4.9">
 </head>
 <body class="theme-light">
 
@@ -198,7 +198,7 @@
         <div class="kpi-content">
           <span class="kpi-title">Danh mục sản phẩm</span>
           <div class="kpi-number text-indigo" id="statTotalProducts">0</div>
-          <span class="kpi-desc" id="statProductDesc">Nạp từ Excel hoặc thêm mới</span>
+          <span class="kpi-desc" id="statProductDesc">Dùng chung cho tất cả các kho</span>
         </div>
       </div>
     </section>
@@ -597,7 +597,7 @@
           <div class="modal-icon-badge icon-excel">📊</div>
           <div>
             <h3 class="modal-heading">Quản Lý & Nạp Danh Mục Sản Phẩm Từ Excel</h3>
-            <p class="modal-subheading">Kéo thả file Excel (.xlsx, .xls, .csv) để cập nhật danh mục cho nhân viên chọn</p>
+            <p class="modal-subheading">Kéo thả file Excel (.xlsx, .xls, .csv) để cập nhật danh mục - Tự động dùng chung cho tất cả các kho con</p>
           </div>
         </div>
         <button class="btn-close-modal" id="btnCloseExcelModal">✕</button>
@@ -948,7 +948,12 @@
               📋 Sao chép
             </button>
           </div>
-          <div class="form-hint" style="margin-top: 6px;">Người nhận mở link này sẽ có một kho riêng biệt, chỉ thấy dữ liệu và nhân viên của kho này.</div>
+          <div class="form-hint" style="margin-top: 8px; line-height: 1.6; background: var(--bg-surface); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+            ✨ <strong>Quy tắc hệ thống:</strong><br/>
+            • <strong>Danh mục sản phẩm:</strong> Dùng chung toàn bộ cho mọi kho con (không cần nạp lại Excel).<br/>
+            • <strong>Danh sách nhân viên:</strong> Tách riêng biệt theo từng kho.<br/>
+            • <strong>Dữ liệu đơn hàng:</strong> Tách riêng biệt, chỉ kho nào thấy đơn kho đó.
+          </div>
         </div>
 
         <div style="border-top: 1px solid var(--border-color); padding-top: 14px;">
@@ -986,7 +991,7 @@
   </div>
 
   <!-- Application Logic Scripts (Cache-busted) -->
-  <script src="firebase-config.js?v=4.8"></script>
-  <script src="app.js?v=4.8"></script>
+  <script src="firebase-config.js?v=4.9"></script>
+  <script src="app.js?v=4.9"></script>
 </body>
 </html>
