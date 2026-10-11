@@ -1519,8 +1519,8 @@ function formatZaloNoticeText(order) {
   const isReceived = (order.warehouseStatus === "DA_VE_KHO");
 
   const headerTitle = isReceived 
-    ? "✅ THÔNG BÁO: HÀNG ĐỔI LỖI ĐÃ VỀ KHO (SIÊU THỊ)" 
-    : "⚠️ THÔNG BÁO: HÀNG ĐỔI LỖI CHƯA VỀ KHO (SIÊU THỊ)";
+    ? "✅ THÔNG TIN: HÀNG ĐỔI LỖI ĐÃ VỀ KHO (SIÊU THỊ)" 
+    : "⚠️ THÔNG TIN: HÀNG ĐỔI LỖI CHƯA VỀ KHO (SIÊU THỊ)";
 
   return [
     headerTitle,
@@ -2021,7 +2021,7 @@ function formatAllZaloNoticeText(orders) {
 
   const lines = [];
   if (hasUnreceived) {
-    lines.push(`⚠️ THÔNG BÁO: HÀNG ĐỔI LỖI CHƯA VỀ KHO (${branchName.toUpperCase()})`);
+    lines.push(`⚠️ THÔNG TIN: HÀNG ĐỔI LỖI CHƯA VỀ KHO (${branchName.toUpperCase()})`);
     lines.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     lines.push(`📌 Danh sách ${orders.length} sản phẩm chưa mang về siêu thị:`);
     lines.push("");
@@ -2035,7 +2035,7 @@ function formatAllZaloNoticeText(orders) {
     lines.push(`🚨 TÌNH TRẠNG: Các sản phẩm trên chưa được mang hàng lỗi về siêu thị!`);
     lines.push(`👉 Đề nghị kiểm tra và hỗ trợ chuyển hàng lỗi về kho sớm nhất.`);
   } else {
-    lines.push(`✅ THÔNG BÁO: HÀNG ĐỔI LỖI ĐÃ VỀ KHO (${branchName.toUpperCase()})`);
+    lines.push(`✅ THÔNG TIN: HÀNG ĐỔI LỖI ĐÃ VỀ KHO (${branchName.toUpperCase()})`);
     lines.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     lines.push(`📌 Danh sách ${orders.length} sản phẩm:`);
     lines.push("");
