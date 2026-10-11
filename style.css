@@ -334,10 +334,7 @@ body.theme-dark .user-badge-icon {
   font-size: 13px;
   font-weight: 700;
   color: var(--text-main);
-  max-width: 180px;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .arrow-down {
   width: 16px;
@@ -2136,10 +2133,10 @@ body.theme-dark .print-wrapper {
   }
   .user-badge-name {
     font-size: 11px;
-    max-width: 72px;
+    font-weight: 700;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    max-width: none;
+    overflow: visible;
   }
   .user-dropdown-menu {
     width: 280px;
