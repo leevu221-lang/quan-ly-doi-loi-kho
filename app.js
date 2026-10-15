@@ -2050,14 +2050,11 @@ function formatAllZaloNoticeText(orders) {
   return lines.join("\n");
 }
 
-// Tạo Canvas đồ họa danh sách TẤT CẢ các đơn chưa về kho (Retina 2x)
+// Tạo Canvas đồ họa danh sách TẤT CẢ các đơn chưa về kho (Retina 2x - Tinh gọn đúng chuẩn hình 1)
 function createAllZaloNoticeCanvas(orders) {
   if (!orders || !orders.length) return null;
   const scale = 2; // 2x Retina sharpness
   const width = 840;
-
-  const branchName = State.currentBranch ? `Kho ${State.currentBranch}` : "Siêu thị";
-  const nowStr = formatDateTime(new Date().toISOString());
 
   // Setup offscreen canvas để đo đạc chiều cao các dòng linh hoạt
   const mCanvas = document.createElement("canvas");
@@ -2067,11 +2064,18 @@ function createAllZaloNoticeCanvas(orders) {
   const rowHeights = orders.map(o => {
     const prodName = o.productName || "Sản phẩm đổi lỗi";
     const lines = calculateWrappedLines(mCtx, prodName, 360);
-    return Math.max(64, 44 + (lines.length * 20));
+    return Math.max(68, 46 + (lines.length * 20));
   });
 
   const totalRowsHeight = rowHeights.reduce((acc, h) => acc + h, 0);
-  const totalHeight = 90 + 50 + 40 + totalRowsHeight + 105 + 40;
+  
+  // Chiều cao tinh gọn theo đúng mẫu hình 1 (Chỉ giữ bảng dữ liệu):
+  // Viền chỉ đỏ trên cùng: 3px
+  // Thanh tiêu đề bảng: 42px
+  // Danh sách các dòng đơn: totalRowsHeight
+  const topAccentH = 3;
+  const tableHeaderH = 42;
+  const totalHeight = topAccentH + tableHeaderH + totalRowsHeight;
 
   const canvas = document.createElement("canvas");
   canvas.width = width * scale;
@@ -2083,76 +2087,34 @@ function createAllZaloNoticeCanvas(orders) {
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, width, totalHeight);
 
-  // 1. Top Header
-  const headerGrad = ctx.createLinearGradient(0, 0, width, 0);
-  headerGrad.addColorStop(0, "#0071ba");
-  headerGrad.addColorStop(1, "#0284c7");
-  ctx.fillStyle = headerGrad;
-  ctx.fillRect(0, 0, width, 90);
+  // 1. Viền đỏ điểm nhấn ở mép trên cùng (như mép trên của hình 1)
+  ctx.fillStyle = "#dc2626";
+  ctx.fillRect(0, 0, width, topAccentH);
 
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "900 22px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-  ctx.fillText("HỆ THỐNG QUẢN LÝ ĐỔI LỖI", 36, 38);
+  let curY = topAccentH;
 
-  ctx.font = "700 14px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-  ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
-  ctx.fillText(`🏢 ${branchName.toUpperCase()} • ĐIỆN MÁY XANH`, 36, 68);
-
-  ctx.font = "500 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-  ctx.textAlign = "right";
-  ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
-  ctx.fillText(`Xuất lúc: ${nowStr}`, width - 36, 38);
-
-  ctx.font = "800 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-  ctx.fillStyle = "#fef08a";
-  ctx.fillText(`TỔNG CỘNG: ${orders.length} ĐƠN`, width - 36, 68);
-  ctx.textAlign = "left";
-
-  let curY = 90;
-
-  // 2. Alert Banner
-  const hasUnreceived = orders.some(o => o.warehouseStatus !== "DA_VE_KHO");
-  if (hasUnreceived) {
-    ctx.fillStyle = "#dc2626";
-    ctx.fillRect(0, curY, width, 50);
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "900 16px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(`⚠️ CẢNH BÁO: ${orders.length} SẢN PHẨM CHƯA ĐƯỢC MANG HÀNG LỖI VỀ SIÊU THỊ ⚠️`, width / 2, curY + 31);
-    ctx.textAlign = "left";
-  } else {
-    ctx.fillStyle = "#059669";
-    ctx.fillRect(0, curY, width, 50);
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "900 16px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(`✅ TẤT CẢ ${orders.length} SẢN PHẨM ĐỔI LỖI ĐÃ ĐƯỢC NHẬN VỀ KHO SIÊU THỊ`, width / 2, curY + 31);
-    ctx.textAlign = "left";
-  }
-  curY += 50;
-
-  // 3. Table Header Bar
+  // 2. Thanh tiêu đề các cột của bảng (Table Header Bar)
   ctx.fillStyle = "#f1f5f9";
-  ctx.fillRect(0, curY, width, 40);
-  ctx.strokeStyle = "#cbd5e1";
+  ctx.fillRect(0, curY, width, tableHeaderH);
+  ctx.strokeStyle = "#e2e8f0";
   ctx.lineWidth = 1;
-  ctx.strokeRect(0, curY, width, 40);
+  ctx.strokeRect(0, curY, width, tableHeaderH);
 
   ctx.font = "800 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
   ctx.fillStyle = "#475569";
   ctx.textAlign = "center";
-  ctx.fillText("STT", 32, curY + 25);
+  ctx.fillText("STT", 32, curY + 26);
 
   ctx.textAlign = "left";
-  ctx.fillText("SĐT & KHÁCH HÀNG", 70, curY + 25);
-  ctx.fillText("SẢN PHẨM ĐỔI LỖI", 330, curY + 25);
+  ctx.fillText("SĐT & KHÁCH HÀNG", 70, curY + 26);
+  ctx.fillText("SẢN PHẨM ĐỔI LỖI", 330, curY + 26);
   ctx.textAlign = "center";
-  ctx.fillText("TRẠNG THÁI", width - 85, curY + 25);
+  ctx.fillText("TRẠNG THÁI", width - 85, curY + 26);
   ctx.textAlign = "left";
 
-  curY += 40;
+  curY += tableHeaderH;
 
-  // 4. Render Rows
+  // 3. Render các dòng đơn hàng
   orders.forEach((o, idx) => {
     const rowH = rowHeights[idx];
     const isRec = (o.warehouseStatus === "DA_VE_KHO");
@@ -2160,9 +2122,11 @@ function createAllZaloNoticeCanvas(orders) {
     const phone = o.customerPhone || "Chưa có";
     const prodName = o.productName || "Sản phẩm đổi lỗi";
 
-    ctx.fillStyle = (idx % 2 === 0) ? "#ffffff" : "#f8fafc";
+    // Màu nền từng hàng (hàng lẻ hàng chẵn)
+    ctx.fillStyle = (idx % 2 === 0) ? "#ffffff" : "#fbfcfd";
     ctx.fillRect(0, curY, width, rowH);
 
+    // Vạch chỉ màu đỏ bên trái cho đơn chưa về kho (như hình 1)
     if (!isRec) {
       ctx.fillStyle = "#dc2626";
       ctx.fillRect(0, curY, 4, rowH);
@@ -2171,6 +2135,7 @@ function createAllZaloNoticeCanvas(orders) {
       ctx.fillRect(0, curY, 4, rowH);
     }
 
+    // Đường kẻ phân cách giữa các hàng
     ctx.strokeStyle = "#e2e8f0";
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -2178,7 +2143,7 @@ function createAllZaloNoticeCanvas(orders) {
     ctx.lineTo(width, curY + rowH);
     ctx.stroke();
 
-    // STT
+    // Cột 1: STT
     ctx.fillStyle = !isRec ? "rgba(220, 38, 38, 0.1)" : "rgba(16, 185, 129, 0.1)";
     drawRoundedRect(ctx, 16, curY + (rowH / 2) - 12, 28, 24, 4, true, false);
     ctx.fillStyle = !isRec ? "#dc2626" : "#059669";
@@ -2187,7 +2152,7 @@ function createAllZaloNoticeCanvas(orders) {
     ctx.fillText(`${idx + 1}`, 30, curY + (rowH / 2) + 5);
     ctx.textAlign = "left";
 
-    // SĐT & Khách hàng
+    // Cột 2: SĐT & Khách hàng
     ctx.font = "900 16px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.fillStyle = "#0284c7";
     ctx.fillText(`📞 ${phone}`, 70, curY + 23);
@@ -2196,7 +2161,7 @@ function createAllZaloNoticeCanvas(orders) {
     ctx.fillStyle = "#1e293b";
     ctx.fillText(`👤 ${custName}`, 70, curY + 44);
 
-    // Sản phẩm
+    // Cột 3: Tên sản phẩm đổi lỗi & Mã sản phẩm
     ctx.font = "bold 15px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.fillStyle = "#0f172a";
     const prodLines = calculateWrappedLines(ctx, prodName, 360);
@@ -2210,7 +2175,7 @@ function createAllZaloNoticeCanvas(orders) {
       ctx.fillText(`Mã: ${o.productCode}`, 330, curY + 23 + (prodLines.length * 20));
     }
 
-    // Trạng thái
+    // Cột 4: Thẻ trạng thái kho
     const badgeX = width - 145;
     const badgeY = curY + (rowH / 2) - 13;
     if (!isRec) {
@@ -2239,56 +2204,6 @@ function createAllZaloNoticeCanvas(orders) {
 
     curY += rowH;
   });
-
-  // 5. Callout Warning Box
-  curY += 15;
-  const boxX = 24;
-  const boxWidth = width - 48;
-  const boxHeight = 85;
-
-  if (hasUnreceived) {
-    ctx.fillStyle = "#fef2f2";
-    drawRoundedRect(ctx, boxX, curY, boxWidth, boxHeight, 8, true, false);
-    ctx.strokeStyle = "#dc2626";
-    ctx.lineWidth = 1.5;
-    drawRoundedRect(ctx, boxX, curY, boxWidth, boxHeight, 8, false, true);
-
-    ctx.fillStyle = "#991b1b";
-    ctx.font = "900 15px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-    ctx.fillText("🚨 LƯU Ý QUAN TRỌNG GỬI ZALO:", boxX + 20, curY + 28);
-
-    ctx.fillStyle = "#dc2626";
-    ctx.font = "700 14px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-    ctx.fillText(`TẤT CẢ ${orders.length} SẢN PHẨM TRÊN CHƯA ĐƯỢC MANG HÀNG LỖI VỀ SIÊU THỊ!`, boxX + 20, curY + 52);
-
-    ctx.fillStyle = "#4b5563";
-    ctx.font = "500 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-    ctx.fillText("👉 Đề nghị kiểm tra với khách hàng và chuyển hàng lỗi về kho siêu thị sớm nhất.", boxX + 20, curY + 74);
-  } else {
-    ctx.fillStyle = "#f0fdf4";
-    drawRoundedRect(ctx, boxX, curY, boxWidth, boxHeight, 8, true, false);
-    ctx.strokeStyle = "#16a34a";
-    ctx.lineWidth = 1.5;
-    drawRoundedRect(ctx, boxX, curY, boxWidth, boxHeight, 8, false, true);
-
-    ctx.fillStyle = "#166534";
-    ctx.font = "900 15px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-    ctx.fillText("✅ ĐÃ HOÀN TẤT:", boxX + 20, curY + 32);
-
-    ctx.fillStyle = "#15803d";
-    ctx.font = "600 14px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-    ctx.fillText(`Tất cả sản phẩm đổi lỗi đã về kho siêu thị đầy đủ.`, boxX + 20, curY + 60);
-  }
-
-  // 6. Watermark Footer
-  ctx.fillStyle = "#f8fafc";
-  ctx.fillRect(0, totalHeight - 40, width, 40);
-
-  ctx.fillStyle = "#94a3b8";
-  ctx.font = "600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText("HỆ THỐNG ĐỔI LỖI SIÊU THỊ • TỰ ĐỘNG XUẤT ẢNH GỬI ZALO", width / 2, totalHeight - 16);
-  ctx.textAlign = "left";
 
   return canvas;
 }
